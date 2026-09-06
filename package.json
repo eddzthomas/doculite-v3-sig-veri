@@ -13,5 +13,8 @@
     "test": "pnpm -r test",
     "build": "pnpm -r build",
     "validate:docs": "node scripts/validate-docs.mjs docs"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.12"
   }
 }
