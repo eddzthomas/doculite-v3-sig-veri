@@ -10,11 +10,12 @@
     "lint": "pnpm -r lint && biome check .",
     "format": "biome format --write .",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test",
+    "test": "vitest run && pnpm -r test",
     "build": "pnpm -r build",
     "validate:docs": "node scripts/validate-docs.mjs docs"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.12"
+    "@biomejs/biome": "^2.5.12",
+    "vitest": "^5.0.0"
   }
 }
