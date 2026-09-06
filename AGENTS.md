@@ -8,9 +8,10 @@ Doculite is a customer-isolated document-management product. Paperless-ngx is th
 
 ## Current state
 
-- Documentation only. No application code, manifests, lockfiles, CI, or toolchain exist yet. There are no build/lint/test commands to run.
-- Do not assume a framework layout, deployment tool, upstream version, or commercial-license outcome not recorded in `docs/`.
+- Documentation-first through the M0 bootstrap: the repository now has a pnpm workspace (apps/web Next.js scaffold, apps/worker, packages/shared), Biome lint/format, Vitest tests, docs validation, GitHub Actions CI, and Dependabot.
+- Still docs-only above the scaffold: no product features, no database, no upstream integrations, no pinned upstream versions yet.
 - Before coding, confirm the task belongs to the current roadmap phase (`docs/delivery/roadmap.md`, baseline M0–M7, 26 weeks) and its entry dependencies are satisfied.
+- Quality gate: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm validate:docs`, `pnpm build` — all must pass; CI enforces them on every push/PR to main.
 - Upstream Paperless-ngx/DocuSeal tags, commits, and container digests must be pinned and recorded during M0 — never build against `latest`.
 - The DocuSeal commercial-license path (`docs/compliance/commercial-license-decision.md`) is a blocking decision. Keep gated features (embedded signing, template building, white-label) disabled behind flags until approval is recorded.
 
