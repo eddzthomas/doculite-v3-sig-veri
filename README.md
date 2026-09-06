@@ -16,4 +16,4 @@ required working process.
 ## Status
 
 Documentation-first. Application code begins with the M0 bootstrap
-(see `docs/superpowers/plans/`).
+(see `plans/`).
