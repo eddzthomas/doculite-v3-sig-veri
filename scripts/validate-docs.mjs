@@ -26,6 +26,27 @@ function isSkippedLink(target) {
   )
 }
 
+// Fenced code contents are illustrative, not navigational links. A line whose
+// trimmed content starts with ``` or ~~~ toggles fenced state; lines inside a
+// fence (including after an unclosed opener) are excluded from link scanning.
+// The TODO/Approved rule is unaffected: it scans all lines of the file.
+function stripFencedLines(content) {
+  const lines = content.split('\n')
+  const unfenced = []
+  let inFence = false
+  for (const line of lines) {
+    const trimmed = line.trimStart()
+    if (trimmed.startsWith('```') || trimmed.startsWith('~~~')) {
+      inFence = !inFence
+      continue
+    }
+    if (!inFence) {
+      unfenced.push(line)
+    }
+  }
+  return unfenced.join('\n')
+}
+
 export async function collectDocIssues(docsDir) {
   const root = resolve(docsDir)
   const files = await listMarkdownFiles(root)
@@ -38,8 +59,8 @@ export async function collectDocIssues(docsDir) {
       .split(sep)
       .join('/')
 
-    // Rule 1: relative links resolve
-    for (const match of content.matchAll(LINK_PATTERN)) {
+    // Rule 1: relative links resolve (outside fenced code blocks)
+    for (const match of stripFencedLines(content).matchAll(LINK_PATTERN)) {
       const target = match[1]
       if (isSkippedLink(target)) continue
       const withoutAnchor = target.split('#')[0]

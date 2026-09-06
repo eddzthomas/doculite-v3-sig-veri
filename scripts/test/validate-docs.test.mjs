@@ -63,4 +63,29 @@ describe('collectDocIssues', () => {
     const issues = await collectDocIssues(dir)
     expect(issues).toHaveLength(0)
   })
+
+  it('ignores links inside a fenced code block', async () => {
+    await writeDoc('h.md', 'Intro\n\n```\nconst link = "[x](./nope.md)"\n```\n')
+    const issues = await collectDocIssues(dir)
+    expect(issues).toHaveLength(0)
+  })
+
+  it('still flags links in prose of a file that also has a fenced block', async () => {
+    await writeDoc('i.md', '```\nconst code = "example"\n```\n\nSee [missing](./nope.md) here.\n')
+    const issues = await collectDocIssues(dir)
+    expect(issues).toHaveLength(1)
+    expect(issues[0]).toMatchObject({ file: 'i.md', type: 'broken-link' })
+  })
+
+  it('ignores links inside a tilde-fenced block', async () => {
+    await writeDoc('j.md', '~~~\n[x](./nope.md)\n~~~\n')
+    const issues = await collectDocIssues(dir)
+    expect(issues).toHaveLength(0)
+  })
+
+  it('ignores links after an unclosed fence opener', async () => {
+    await writeDoc('k.md', '```\nconst x = 1\n\nSee [missing](./nope.md) here.\n')
+    const issues = await collectDocIssues(dir)
+    expect(issues).toHaveLength(0)
+  })
 })
