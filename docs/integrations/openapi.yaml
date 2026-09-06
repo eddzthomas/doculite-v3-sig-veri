@@ -1,0 +1,180 @@
+openapi: 3.1.0
+info:
+  title: Doculite Product Integration API
+  version: 0.1.0-draft
+  description: |
+    Product-owned API contract. Paperless and DocuSeal upstream endpoints are not exposed by this contract.
+    Authentication and authorization mechanism are deployment decisions pending ADR approval.
+servers:
+  - url: https://{customer-host}/api/v1
+    variables:
+      customer-host:
+        default: customer.example.invalid
+paths:
+  /documents/{documentId}/verification:
+    parameters:
+      - $ref: '#/components/parameters/documentId'
+    get:
+      summary: Get latest verification result and history summary
+      responses:
+        '200':
+          description: Verification data
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerificationResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      summary: Request a new verification run
+      responses:
+        '202':
+          description: Verification queued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerificationRun' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /documents/{documentId}/signature-requests:
+    parameters:
+      - $ref: '#/components/parameters/documentId'
+    post:
+      summary: Create a signing request from a Paperless document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSigningRequest' }
+      responses:
+        '201':
+          description: Signing request created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SigningRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /documents/{documentId}/related-signatures:
+    parameters:
+      - $ref: '#/components/parameters/documentId'
+    get:
+      summary: List linked signing requests and completed documents
+      responses:
+        '200':
+          description: Related signing records
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/SigningRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /signature-requests/{requestId}:
+    parameters:
+      - $ref: '#/components/parameters/requestId'
+    get:
+      summary: Get a signing request
+      responses:
+        '200':
+          description: Signing request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SigningRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /signature-requests/{requestId}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/requestId'
+    post:
+      summary: Cancel a signing request when its state permits
+      responses:
+        '200':
+          description: Updated signing request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SigningRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /webhooks/docuseal:
+    post:
+      summary: Receive DocuSeal provider event
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '202': { description: Receipt accepted for reconciliation }
+        '400': { description: Malformed or unsupported event }
+        '401': { description: Provider authentication failed }
+components:
+  parameters:
+    documentId:
+      name: documentId
+      in: path
+      required: true
+      schema: { type: string }
+    requestId:
+      name: requestId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    Forbidden: { description: Caller is not authorized for the related document }
+    NotFound: { description: Resource does not exist or is not visible to caller }
+    Conflict: { description: Requested state transition is not permitted }
+  schemas:
+    VerificationStatus:
+      type: string
+      enum: [unsigned, valid_trusted, valid_untrusted, invalid, error]
+    VerificationRun:
+      type: object
+      required: [id, documentId, status, requestedAt]
+      properties:
+        id: { type: string, format: uuid }
+        documentId: { type: string }
+        status: { $ref: '#/components/schemas/VerificationStatus' }
+        requestedAt: { type: string, format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        sha256: { type: [string, 'null'], pattern: '^[a-f0-9]{64}$' }
+    VerificationResponse:
+      type: object
+      required: [latest, history]
+      properties:
+        latest: { oneOf: [{ $ref: '#/components/schemas/VerificationRun' }, { type: 'null' }] }
+        history:
+          type: array
+          items: { $ref: '#/components/schemas/VerificationRun' }
+    SigningRequestState:
+      type: string
+      enum: [draft, creating, sent, in_progress, completed, declined, expired, cancelled, failed]
+    Recipient:
+      type: object
+      required: [reference, order]
+      properties:
+        reference: { type: string, description: Opaque external recipient reference }
+        order: { type: integer, minimum: 1 }
+    CreateSigningRequest:
+      type: object
+      required: [recipients]
+      properties:
+        recipients:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Recipient' }
+        templateReference: { type: [string, 'null'] }
+        expiresAt: { type: [string, 'null'], format: date-time }
+    SigningRequest:
+      type: object
+      required: [id, sourceDocumentId, state, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        sourceDocumentId: { type: string }
+        state: { $ref: '#/components/schemas/SigningRequestState' }
+        completedDocumentId: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
