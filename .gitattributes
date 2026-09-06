@@ -5,3 +5,12 @@
 *.ico binary
 *.woff binary
 *.woff2 binary
+
+# Binary assets
+*.pdf binary
+*.jpeg binary
+*.ttf binary
+*.otf binary
+*.webp binary
+*.eot binary
+*.wasm binary
