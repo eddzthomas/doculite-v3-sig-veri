@@ -6,11 +6,15 @@
  * Anonymous access only — no credentials, ever. Fails loudly rather than writing partial pins.
  * Spec: plans/specs/2026-09-06-m0a-upstream-pinning-design.md
  */
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { computeDrift } from './lib/upstream-pin/drift.mjs'
-import { fetchCommitSha, fetchLatestStableRelease } from './lib/upstream-pin/github.mjs'
+import {
+  fetchCommitSha,
+  fetchLatestStableRelease,
+  fetchLatestStableTag,
+} from './lib/upstream-pin/github.mjs'
 import { fetchImageDigest } from './lib/upstream-pin/registry.mjs'
 import { COMPONENTS, validateManifest } from './lib/upstream-pin/schema.mjs'
 
@@ -21,14 +25,24 @@ const MANIFEST_PATH = resolve(
   'upstream-versions.json',
 )
 
-export async function resolveComponent(component, { fetchImpl, todayIso }) {
-  const release = await fetchLatestStableRelease(fetchImpl, component.owner, component.repo)
-  const commitSha = await fetchCommitSha(fetchImpl, component.owner, component.repo, release.tag)
+// Registries tag images by their own convention; the GitHub release tag does not
+// always match (e.g. ghcr serves paperless-ngx under the bare semver, postgres
+// images use the REL_ tag's numeric version). The GitHub `tag` field stays the
+// full release/tag name — only the image tagRef is mapped.
+export function transformImageTag(transform, tag) {
+  if (transform === 'strip-v') return tag.replace(/^v/, '')
+  if (transform === 'postgres-rel') return tag.replace(/^REL_/, '').replace(/_/g, '.')
+  if (transform === 'identity') return tag
+  throw new Error(`unknown imageTagTransform: ${transform}`)
+}
 
-  // Registries tag images by their own convention; the GitHub release tag does not
-  // always match (e.g. ghcr serves paperless-ngx under the bare semver). The GitHub
-  // `tag` field below stays the full release tag — only the image tagRef is mapped.
-  const imageTagRef = component.imageTagStripV ? release.tag.replace(/^v/, '') : release.tag
+export async function resolveComponent(component, { fetchImpl, todayIso }) {
+  const release =
+    component.tagSource === 'tags'
+      ? await fetchLatestStableTag(fetchImpl, component.owner, component.repo, component.tagPattern)
+      : await fetchLatestStableRelease(fetchImpl, component.owner, component.repo)
+  const commitSha = await fetchCommitSha(fetchImpl, component.owner, component.repo, release.tag)
+  const imageTagRef = transformImageTag(component.imageTagTransform, release.tag)
 
   const registries = [[component.registry, component.imageRepository]]
   if (component.fallbackRegistry !== undefined) {
@@ -57,11 +71,16 @@ export async function resolveComponent(component, { fetchImpl, todayIso }) {
     repository: `https://github.com/${component.owner}/${component.repo}`,
     tag: release.tag,
     releaseUrl: release.releaseUrl,
-    releaseDate: release.releaseDate,
+    // tags-source components have no release date from the tags API; null is the
+    // explicit "no date recorded" marker the schema accepts.
+    releaseDate: release.releaseDate || null,
     commitSha,
     image,
     evidence: {
-      githubApi: `https://api.github.com/repos/${component.owner}/${component.repo}/releases`,
+      githubApi:
+        component.tagSource === 'tags'
+          ? `https://api.github.com/repos/${component.owner}/${component.repo}/git/matching-refs/tags/`
+          : `https://api.github.com/repos/${component.owner}/${component.repo}/releases`,
       registryApi: `https://${image.registry}/v2/${image.repository}/manifests/${image.tagRef}`,
     },
     capturedAt: todayIso,
@@ -77,12 +96,16 @@ export async function fetchAllComponents({ fetchImpl, todayIso, components = COM
     capturedAt: todayIso,
     components: records.map(({ capturedAt, ...rest }) => rest),
   }
-  return { manifest, errors: validateManifest(manifest) }
+  return { manifest, errors: validateManifest(manifest, { expected: components }) }
 }
 
 async function writeManifest(manifest) {
+  // Write to a temp file then rename so a crash mid-write can never leave a
+  // truncated or partially written manifest on disk.
   await mkdir(dirname(MANIFEST_PATH), { recursive: true })
-  await writeFile(MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+  const tmp = `${MANIFEST_PATH}.tmp`
+  await writeFile(tmp, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+  await rename(tmp, MANIFEST_PATH)
 }
 
 async function readManifest() {
@@ -128,23 +151,34 @@ async function runValidate() {
   }
 
   const live = []
-  for (const component of COMPONENTS) {
-    const recorded = manifest.components.find((c) => c.name === component.name)
-    if (recorded === undefined) continue
-    const release = await fetchLatestStableRelease(fetch, component.owner, component.repo)
-    const commitSha = await fetchCommitSha(fetch, component.owner, component.repo, recorded.tag)
-    const digest = await fetchImageDigest(
-      fetch,
-      recorded.image.registry,
-      recorded.image.repository,
-      recorded.image.tagRef,
-    )
-    live.push({
-      name: recorded.name,
-      tag: release.tag,
-      commitSha,
-      image: { ...recorded.image, digest },
-    })
+  try {
+    for (const component of COMPONENTS) {
+      const recorded = manifest.components.find((c) => c.name === component.name)
+      if (recorded === undefined) continue
+      const release =
+        component.tagSource === 'tags'
+          ? await fetchLatestStableTag(fetch, component.owner, component.repo, component.tagPattern)
+          : await fetchLatestStableRelease(fetch, component.owner, component.repo)
+      const commitSha = await fetchCommitSha(fetch, component.owner, component.repo, recorded.tag)
+      const digest = await fetchImageDigest(
+        fetch,
+        recorded.image.registry,
+        recorded.image.repository,
+        recorded.image.tagRef,
+      )
+      live.push({
+        name: recorded.name,
+        tag: release.tag,
+        commitSha,
+        image: { ...recorded.image, digest },
+      })
+    }
+  } catch (error) {
+    // Network/API failures during live derivation must not look like drift —
+    // abort with a distinct message instead of comparing against partial data.
+    console.error(`live validation failed: ${error.message}`)
+    process.exitCode = 1
+    return
   }
 
   const drift = computeDrift(manifest.components, live)
