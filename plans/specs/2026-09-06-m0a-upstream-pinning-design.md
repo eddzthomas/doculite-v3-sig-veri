@@ -81,3 +81,10 @@ Prefer GHCR for both components (`ghcr.io/paperless-ngx/paperless-ngx`, `ghcr.io
 
 - Upstream may publish a newer stable between research and execution; the policy is "latest stable at execution time", so the manifest records whatever the live API returns — the dates and tags in this spec are expectations, not requirements.
 - The `validate` mode is the seed of the upgrade rehearsal tooling; do not gold-plate it (no scheduling, no auto-PRs).
+
+## Addendum (2026-09-08): registry conventions corrected by live execution
+
+The live fetch proved two spec assumptions wrong; the ratified record is `deploy/upstream-versions.json`:
+
+- paperless-ngx images on ghcr.io are tagged WITHOUT the `v` prefix (GitHub tag `v3.1.3` → image tagRef `3.1.3`).
+- DocuSeal's pullable image is `docker.io/docuseal/docuseal` (Docker Hub org `docuseal`, not the GitHub org `docusealco`); `ghcr.io/docusealco/docuseal` denies anonymous pulls. The "Prefer GHCR for both" registry-selection rule and the docusealco fallback in this spec are superseded.
