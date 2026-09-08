@@ -9,6 +9,23 @@
 - Current successful backup and confirmed restore point for the affected customer.
 - Staging validation completed against the same upstream versions and configuration class.
 
+## Local M0 stack
+
+The disposable local stack (DEV ONLY — never for customer deployments) runs the pinned
+Paperless-ngx, DocuSeal, Postgres, and Redis images by digest, from
+`deploy/local/compose.yaml`. Pin authority: `deploy/upstream-versions.json`;
+digest agreement is checked by `pnpm validate:compose`.
+
+- Start: `node deploy/local/stack.mjs start` (waits for health)
+- Status: `node deploy/local/stack.mjs health`
+- Stop (data preserved): `node deploy/local/stack.mjs stop`
+- Destroy (volumes removed): `node deploy/local/stack.mjs nuke`
+
+Requires Docker Desktop with the daemon running. Copy `deploy/local/.env.example`
+to `deploy/local/.env` first. Never put real customer documents in this stack;
+fixtures are created only by the M0-C fixture work. Re-pin backing services only
+via the upstream upgrade policy.
+
 ## Deployment procedure
 
 1. Announce the maintenance window when required and confirm monitoring coverage.
