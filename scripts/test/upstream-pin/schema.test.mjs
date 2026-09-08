@@ -30,22 +30,82 @@ const validManifest = {
       releaseDate: '2026-09-01',
       commitSha: 'c'.repeat(40),
       image: {
-        registry: 'ghcr.io',
-        repository: 'docusealco/docuseal',
+        registry: 'docker.io',
+        repository: 'docuseal/docuseal',
         tagRef: '3.2.2',
         digest: `sha256:${'d'.repeat(64)}`,
       },
       evidence: {
         githubApi: 'https://api.github.com/repos/docusealco/docuseal/releases',
-        registryApi: 'https://ghcr.io/v2/docusealco/docuseal/manifests/3.2.2',
+        registryApi: 'https://registry-1.docker.io/v2/docuseal/docuseal/manifests/3.2.2',
+      },
+    },
+    {
+      name: 'postgres',
+      repository: 'https://github.com/postgres/postgres',
+      tag: 'REL_17_5',
+      releaseUrl: 'https://github.com/postgres/postgres/releases/tag/REL_17_5',
+      releaseDate: null,
+      commitSha: 'e'.repeat(40),
+      image: {
+        registry: 'docker.io',
+        repository: 'library/postgres',
+        tagRef: '17.5',
+        digest: `sha256:${'f'.repeat(64)}`,
+      },
+      evidence: {
+        githubApi: 'https://api.github.com/repos/postgres/postgres/git/matching-refs/tags/',
+        registryApi: 'https://registry-1.docker.io/v2/library/postgres/manifests/17.5',
+      },
+    },
+    {
+      name: 'redis',
+      repository: 'https://github.com/redis/redis',
+      tag: '8.2.0',
+      releaseUrl: 'https://github.com/redis/redis/releases/tag/8.2.0',
+      releaseDate: '2026-08-20',
+      commitSha: '1'.repeat(40),
+      image: {
+        registry: 'docker.io',
+        repository: 'library/redis',
+        tagRef: '8.2.0',
+        digest: `sha256:${'2'.repeat(64)}`,
+      },
+      evidence: {
+        githubApi: 'https://api.github.com/repos/redis/redis/releases',
+        registryApi: 'https://registry-1.docker.io/v2/library/redis/manifests/8.2.0',
       },
     },
   ],
 }
 
 describe('COMPONENTS', () => {
-  it('declares exactly paperless-ngx and docuseal', () => {
-    expect(COMPONENTS.map((c) => c.name)).toEqual(['paperless-ngx', 'docuseal'])
+  it('declares exactly paperless-ngx, docuseal, postgres, and redis', () => {
+    expect(COMPONENTS.map((c) => c.name)).toEqual([
+      'paperless-ngx',
+      'docuseal',
+      'postgres',
+      'redis',
+    ])
+  })
+
+  it('declares tag sources and image transforms per component', () => {
+    const byName = new Map(COMPONENTS.map((c) => [c.name, c]))
+    expect(byName.get('paperless-ngx').tagSource).toBe('releases')
+    expect(byName.get('paperless-ngx').imageTagTransform).toBe('strip-v')
+    expect(byName.get('docuseal').tagSource).toBe('releases')
+    expect(byName.get('docuseal').imageTagTransform).toBe('identity')
+    expect(byName.get('postgres').tagSource).toBe('tags')
+    expect(byName.get('postgres').imageTagTransform).toBe('postgres-rel')
+    expect(byName.get('postgres').imageRepository).toBe('library/postgres')
+    expect(byName.get('redis').tagSource).toBe('releases')
+    expect(byName.get('redis').imageTagTransform).toBe('identity')
+    expect(byName.get('redis').imageRepository).toBe('library/redis')
+    for (const name of ['postgres', 'redis']) {
+      const c = byName.get(name)
+      expect(c.registry).toBe('docker.io')
+      expect(c.fallbackRegistry).toBeUndefined()
+    }
   })
 
   it('requires v-prefix tags for paperless-ngx and bare or v-prefixed for docuseal', () => {
@@ -56,20 +116,10 @@ describe('COMPONENTS', () => {
     expect(byName.get('docuseal').tagPattern.test('v3.2.2')).toBe(true)
   })
 
-  it('declares paperless-ngx strips the v prefix for its ghcr image tag', () => {
-    const paperless = COMPONENTS.find((c) => c.name === 'paperless-ngx')
-    expect(paperless.imageTagStripV).toBe(true)
-    expect(paperless.registry).toBe('ghcr.io')
-    expect(paperless.imageRepository).toBe('paperless-ngx/paperless-ngx')
-  })
-
-  it('declares docuseal on docker.io under the docuseal org with no dead fallback', () => {
-    const docuseal = COMPONENTS.find((c) => c.name === 'docuseal')
-    expect(docuseal.imageTagStripV).toBe(false)
-    expect(docuseal.registry).toBe('docker.io')
-    expect(docuseal.imageRepository).toBe('docuseal/docuseal')
-    expect(docuseal.fallbackRegistry).toBeUndefined()
-    expect(docuseal.fallbackImageRepository).toBeUndefined()
+  it('accepts postgres REL_ tags and rejects others', () => {
+    const byName = new Map(COMPONENTS.map((c) => [c.name, c]))
+    expect(byName.get('postgres').tagPattern.test('REL_17_5')).toBe(true)
+    expect(byName.get('postgres').tagPattern.test('v17.5')).toBe(false)
   })
 })
 
@@ -83,10 +133,29 @@ describe('validateManifest', () => {
     expect(validateManifest('nope').length).toBeGreaterThan(0)
   })
 
-  it('requires both components to be present', () => {
+  it('requires all declared components to be present', () => {
     const m = structuredClone(validManifest)
     m.components = m.components.slice(0, 1)
     expect(validateManifest(m).join(' ')).toMatch(/docuseal/)
+  })
+
+  it('validates only the components it is given when an explicit expected list is passed', () => {
+    const m = structuredClone(validManifest)
+    m.components = m.components.slice(0, 2)
+    expect(
+      validateManifest(m, { expected: [{ name: 'paperless-ngx' }, { name: 'docuseal' }] }),
+    ).toEqual([])
+    expect(validateManifest(m).length).toBeGreaterThan(0)
+  })
+
+  it('accepts a null releaseDate and rejects empty or non-date values', () => {
+    const m = structuredClone(validManifest)
+    m.components[2].releaseDate = null
+    expect(validateManifest(m)).toEqual([])
+    m.components[2].releaseDate = ''
+    expect(validateManifest(m).join(' ')).toMatch(/releaseDate/)
+    m.components[2].releaseDate = 'not-a-date'
+    expect(validateManifest(m).join(' ')).toMatch(/releaseDate/)
   })
 
   it.each([

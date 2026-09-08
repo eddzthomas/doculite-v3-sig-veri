@@ -13,10 +13,11 @@ export const COMPONENTS = Object.freeze([
     owner: 'paperless-ngx',
     repo: 'paperless-ngx',
     tagPattern: /^v\d+\.\d+\.\d+$/,
+    // ghcr.io serves paperless-ngx images under the bare semver tag (v3.1.3 release → 3.1.3 image tag).
+    tagSource: 'releases',
+    imageTagTransform: 'strip-v',
     registry: 'ghcr.io',
     imageRepository: 'paperless-ngx/paperless-ngx',
-    // ghcr.io serves paperless-ngx images under the bare semver tag (v3.1.3 release → 3.1.3 image tag).
-    imageTagStripV: true,
   }),
   Object.freeze({
     name: 'docuseal',
@@ -26,12 +27,40 @@ export const COMPONENTS = Object.freeze([
     // Real-world probe: ghcr.io/docusealco/docuseal is anonymously denied and
     // docker.io/docusealco/docuseal does not exist; the pullable image lives
     // under the `docuseal` Docker Hub org. No fallback — a dead end invites partial pins.
+    tagSource: 'releases',
+    imageTagTransform: 'identity',
     registry: 'docker.io',
     imageRepository: 'docuseal/docuseal',
-    // Docker Hub tags match the GitHub release tags verbatim (no v prefix to strip).
-    imageTagStripV: false,
+  }),
+  Object.freeze({
+    name: 'postgres',
+    owner: 'postgres',
+    repo: 'postgres',
+    // postgres publishes tags without GitHub release objects; resolved via the
+    // git tags API with numeric comparison (REL_17_10 > REL_17_9).
+    tagPattern: /^REL_\d+_\d+$/,
+    tagSource: 'tags',
+    imageTagTransform: 'postgres-rel',
+    registry: 'docker.io',
+    imageRepository: 'library/postgres',
+  }),
+  Object.freeze({
+    name: 'redis',
+    owner: 'redis',
+    repo: 'redis',
+    tagPattern: /^\d+\.\d+\.\d+$/,
+    tagSource: 'releases',
+    imageTagTransform: 'identity',
+    registry: 'docker.io',
+    imageRepository: 'library/redis',
   }),
 ])
+
+// Manifest records carry the full GitHub tag (REL_17_5 for postgres) and the
+// registry's own image tag convention (17.5 after the postgres-rel transform),
+// so both validations accept those shapes alongside stable semver.
+const MANIFEST_TAG = new RegExp(`${STABLE_SEMVER.source}|^REL_\\d+_\\d+$`)
+const MANIFEST_IMAGE_TAG_REF = new RegExp(`${STABLE_SEMVER.source}|^\\d+\\.\\d+$`)
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.length > 0
@@ -46,14 +75,19 @@ function isRealIsoDate(value) {
 
 function validateComponent(component, name, errors) {
   const prefix = `components[${name}]`
-  for (const field of ['name', 'repository', 'tag', 'releaseUrl', 'releaseDate', 'commitSha']) {
+  for (const field of ['name', 'repository', 'tag', 'releaseUrl', 'commitSha']) {
     if (!isNonEmptyString(component[field])) errors.push(`${prefix}: missing ${field}`)
   }
-  if (isNonEmptyString(component.tag) && !STABLE_SEMVER.test(component.tag)) {
-    errors.push(`${prefix}: tag must be a stable semver (got ${JSON.stringify(component.tag)})`)
+  // tags-source components have no release date from the git tags API; the CLI
+  // records null for them. Any other value must be a real calendar date ('' and
+  // non-dates are rejected — a silently missing date would hide provenance gaps).
+  if (component.releaseDate !== null && !isRealIsoDate(component.releaseDate)) {
+    errors.push(`${prefix}: releaseDate must be YYYY-MM-DD or null`)
   }
-  if (isNonEmptyString(component.releaseDate) && !isRealIsoDate(component.releaseDate)) {
-    errors.push(`${prefix}: releaseDate must be YYYY-MM-DD`)
+  if (isNonEmptyString(component.tag) && !MANIFEST_TAG.test(component.tag)) {
+    errors.push(
+      `${prefix}: tag must be a stable semver or REL_<major>_<minor> (got ${JSON.stringify(component.tag)})`,
+    )
   }
   if (isNonEmptyString(component.commitSha) && !COMMIT_SHA.test(component.commitSha)) {
     errors.push(`${prefix}: commitSha must be a 40-hex SHA`)
@@ -66,7 +100,7 @@ function validateComponent(component, name, errors) {
     for (const field of ['registry', 'repository', 'tagRef', 'digest']) {
       if (!isNonEmptyString(image[field])) errors.push(`${prefix}: image missing ${field}`)
     }
-    if (isNonEmptyString(image.tagRef) && !STABLE_SEMVER.test(image.tagRef)) {
+    if (isNonEmptyString(image.tagRef) && !MANIFEST_IMAGE_TAG_REF.test(image.tagRef)) {
       errors.push(`${prefix}: image.tagRef must be a stable semver`)
     }
     if (isNonEmptyString(image.digest) && !DIGEST.test(image.digest)) {
@@ -84,7 +118,7 @@ function validateComponent(component, name, errors) {
   }
 }
 
-export function validateManifest(manifest) {
+export function validateManifest(manifest, { expected = COMPONENTS } = {}) {
   const errors = []
   if (manifest === null || typeof manifest !== 'object' || Array.isArray(manifest)) {
     return ['manifest: must be a JSON object']
@@ -97,13 +131,13 @@ export function validateManifest(manifest) {
     return errors
   }
   const byName = new Map(manifest.components.map((c) => [c?.name, c]))
-  for (const expected of COMPONENTS) {
-    const component = byName.get(expected.name)
+  for (const expectedComponent of expected) {
+    const component = byName.get(expectedComponent.name)
     if (component === undefined || component === null || typeof component !== 'object') {
-      errors.push(`manifest: missing component ${expected.name}`)
+      errors.push(`manifest: missing component ${expectedComponent.name}`)
       continue
     }
-    validateComponent(component, expected.name, errors)
+    validateComponent(component, expectedComponent.name, errors)
   }
   return errors
 }

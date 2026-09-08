@@ -36,6 +36,42 @@
         "githubApi": "https://api.github.com/repos/docusealco/docuseal/releases",
         "registryApi": "https://docker.io/v2/docuseal/docuseal/manifests/3.2.4"
       }
+    },
+    {
+      "name": "postgres",
+      "repository": "https://github.com/postgres/postgres",
+      "tag": "REL_18_6",
+      "releaseUrl": "https://github.com/postgres/postgres/releases/tag/REL_18_6",
+      "releaseDate": null,
+      "commitSha": "724edf9bde9d356724ad384a2e196edc3c9f80f7",
+      "image": {
+        "registry": "docker.io",
+        "repository": "library/postgres",
+        "tagRef": "18.6",
+        "digest": "sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280"
+      },
+      "evidence": {
+        "githubApi": "https://api.github.com/repos/postgres/postgres/git/matching-refs/tags/",
+        "registryApi": "https://docker.io/v2/library/postgres/manifests/18.6"
+      }
+    },
+    {
+      "name": "redis",
+      "repository": "https://github.com/redis/redis",
+      "tag": "8.10.1",
+      "releaseUrl": "https://github.com/redis/redis/releases/tag/8.10.1",
+      "releaseDate": "2026-08-17",
+      "commitSha": "3399357e7c17b668289386b8a15a3037bc4527b1",
+      "image": {
+        "registry": "docker.io",
+        "repository": "library/redis",
+        "tagRef": "8.10.1",
+        "digest": "sha256:298e5b3bc566bade82f46ad5511777a4a07a294097ce16ada2f6a42be5239df5"
+      },
+      "evidence": {
+        "githubApi": "https://api.github.com/repos/redis/redis/releases",
+        "registryApi": "https://docker.io/v2/library/redis/manifests/8.10.1"
+      }
     }
   ]
 }
