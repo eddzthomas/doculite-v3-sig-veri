@@ -60,11 +60,14 @@ function compareNumericSegments(a, b) {
 /**
  * Resolves the greatest tag matching tagPattern via the git tags API,
  * which works for repositories that publish tags without GitHub release
- * objects (e.g. postgres). Paginates up to 5 pages of 100.
+ * objects (e.g. postgres). Paginates up to 5 pages of 100 and throws if the
+ * tag list is not exhausted within that cap.
  */
 export async function fetchLatestStableTag(fetchImpl, owner, repo, tagPattern) {
   const collected = []
-  for (let page = 1; page <= 5; page++) {
+  const MAX_PAGES = 5
+  let lastPageFull = false
+  for (let page = 1; page <= MAX_PAGES; page++) {
     const url = `https://api.github.com/repos/${owner}/${repo}/git/matching-refs/tags/?per_page=100&page=${page}`
     const res = await fetchImpl(url, { headers: HEADERS })
     if (!res.ok)
@@ -74,8 +77,15 @@ export async function fetchLatestStableTag(fetchImpl, owner, repo, tagPattern) {
       const name = typeof r.ref === 'string' ? r.ref.replace(/^refs\/tags\//, '') : null
       if (name !== null && tagPattern.test(name)) collected.push(name)
     }
-    if (refs.length < 100) break
+    lastPageFull = refs.length === 100
+    if (!lastPageFull) break
   }
+  // A full final page means the tag list may continue beyond the cap; failing
+  // loud beats silently picking a "latest" that could be stale.
+  if (lastPageFull)
+    throw new Error(
+      `tag pagination cap reached for ${owner}/${repo}: ${MAX_PAGES} pages of 100 fetched without exhausting the tag list`,
+    )
   if (collected.length === 0) throw new Error(`no matching tag found for ${owner}/${repo}`)
   collected.sort(compareNumericSegments)
   const tag = collected[collected.length - 1]

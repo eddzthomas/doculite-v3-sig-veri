@@ -30,6 +30,14 @@ describe('fetchLatestStableTag', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2)
   })
 
+  it('throws loudly when the pagination cap is exhausted', async () => {
+    const fullPage = Array.from({ length: 100 }, (_, i) => ref(`REL_16_${i + 1}`))
+    const fetchImpl = vi.fn(async () => pageResponse(fullPage))
+    await expect(
+      fetchLatestStableTag(fetchImpl, 'postgres', 'postgres', /^REL_\d+_\d+$/),
+    ).rejects.toThrow(/pagination cap/)
+  })
+
   it('throws when no tag matches the pattern', async () => {
     const fetchImpl = vi.fn(async () => pageResponse([ref('alpha')]))
     await expect(fetchLatestStableTag(fetchImpl, 'o', 'r', /^REL_\d+_\d+$/)).rejects.toThrow(

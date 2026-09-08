@@ -1,9 +1,20 @@
 import { describe, expect, it, vi } from 'vitest'
-import { parseComposePs, waitForHealthy } from '../../deploy/local/stack.mjs'
+import { checkEnvFile, parseComposePs, waitForHealthy } from '../../deploy/local/stack.mjs'
 
 function psLine(service, health) {
   return JSON.stringify({ Service: service, State: 'running', Health: health })
 }
+
+describe('checkEnvFile', () => {
+  it('returns null when .env exists', () => {
+    expect(checkEnvFile(true)).toBeNull()
+  })
+
+  it('points at .env.example when .env is missing', () => {
+    const message = checkEnvFile(false)
+    expect(message).toMatch(/\.env\.example/)
+  })
+})
 
 describe('parseComposePs', () => {
   it('parses newline-delimited json output', () => {

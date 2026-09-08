@@ -10,8 +10,7 @@ import { pathToFileURL } from 'node:url'
 
 function repoKey(repository) {
   // Compare on the repository path so `ghcr.io/x/y` and `x/y` match.
-  const withoutHost = repository.replace(/^[^/]+\.(?:io|com)\//, '').replace(/^docker\.io\//, '')
-  return withoutHost.replace(/^library\//, 'library/')
+  return repository.replace(/^[^/]+\.(?:io|com)\//, '').replace(/^docker\.io\//, '')
 }
 
 export async function validateComposeDigests(manifestPath, composePath) {

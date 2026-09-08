@@ -7,11 +7,20 @@
  *   node stack.mjs nuke   — down -v (destroys volumes; the disposable guarantee)
  */
 import { execFileSync } from 'node:child_process'
-import { dirname } from 'node:path'
+import { existsSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 export const SERVICES = ['postgres', 'redis', 'paperless', 'docuseal']
+
+// Returns an operator-facing message when deploy/local/.env is absent, else
+// null. Kept pure so the check stays offline-testable; the CLI path prints
+// and exits before docker is invoked.
+export function checkEnvFile(exists) {
+  if (exists) return null
+  return 'deploy/local/.env not found — copy .env.example to deploy/local/.env before starting the stack'
+}
 
 export function parseComposePs(stdout) {
   const services = new Map()
@@ -66,6 +75,11 @@ function compose(args, { capture } = {}) {
 }
 
 async function main() {
+  const envMessage = checkEnvFile(existsSync(join(HERE, '.env')))
+  if (envMessage !== null) {
+    console.error(envMessage)
+    process.exit(1)
+  }
   const mode = process.argv[2]
   if (mode === 'start') {
     compose(['up', '-d', '--wait'], { capture: false })
