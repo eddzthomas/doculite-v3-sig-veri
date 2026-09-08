@@ -14,6 +14,17 @@ describe('parseComposePs', () => {
     expect(services.get('redis')).toBe('starting')
   })
 
+  it('parses a json array (docker compose v2.21+ / v5 shape)', () => {
+    const services = parseComposePs(
+      JSON.stringify([
+        { Service: 'postgres', State: 'running', Health: 'healthy' },
+        { Service: 'redis', State: 'running', Health: 'starting' },
+      ]),
+    )
+    expect(services.get('postgres')).toBe('healthy')
+    expect(services.get('redis')).toBe('starting')
+  })
+
   it('treats a missing service as no-health', () => {
     const services = parseComposePs([psLine('postgres', 'healthy')].join('\n'))
     expect(services.has('redis')).toBe(false)

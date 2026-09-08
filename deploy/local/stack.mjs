@@ -15,10 +15,24 @@ export const SERVICES = ['postgres', 'redis', 'paperless', 'docuseal']
 
 export function parseComposePs(stdout) {
   const services = new Map()
-  for (const line of stdout.split('\n')) {
-    const trimmed = line.trim()
-    if (trimmed === '') continue
-    const row = JSON.parse(trimmed)
+  // Docker Compose emits either a JSON array (v2.21+/v5) or line-delimited
+  // JSON objects depending on version; accept both shapes.
+  const trimmed = stdout.trim()
+  if (trimmed === '') return services
+  let rows
+  try {
+    rows = JSON.parse(trimmed)
+  } catch {
+    rows = trimmed.split('\n')
+  }
+  if (!Array.isArray(rows)) return services
+  for (const raw of rows) {
+    let row = raw
+    if (typeof row === 'string') {
+      const line = row.trim()
+      if (line === '') continue
+      row = JSON.parse(line)
+    }
     if (typeof row.Service === 'string') services.set(row.Service, row.Health ?? 'none')
   }
   return services
