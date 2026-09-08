@@ -15,16 +15,21 @@ export const COMPONENTS = Object.freeze([
     tagPattern: /^v\d+\.\d+\.\d+$/,
     registry: 'ghcr.io',
     imageRepository: 'paperless-ngx/paperless-ngx',
+    // ghcr.io serves paperless-ngx images under the bare semver tag (v3.1.3 release → 3.1.3 image tag).
+    imageTagStripV: true,
   }),
   Object.freeze({
     name: 'docuseal',
     owner: 'docusealco',
     repo: 'docuseal',
     tagPattern: /^(?:v)?\d+\.\d+\.\d+$/,
-    registry: 'ghcr.io',
-    imageRepository: 'docusealco/docuseal',
-    fallbackRegistry: 'docker.io',
-    fallbackImageRepository: 'docusealco/docuseal',
+    // Real-world probe: ghcr.io/docusealco/docuseal is anonymously denied and
+    // docker.io/docusealco/docuseal does not exist; the pullable image lives
+    // under the `docuseal` Docker Hub org. No fallback — a dead end invites partial pins.
+    registry: 'docker.io',
+    imageRepository: 'docuseal/docuseal',
+    // Docker Hub tags match the GitHub release tags verbatim (no v prefix to strip).
+    imageTagStripV: false,
   }),
 ])
 

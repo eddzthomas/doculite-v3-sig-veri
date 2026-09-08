@@ -55,6 +55,22 @@ describe('COMPONENTS', () => {
     expect(byName.get('docuseal').tagPattern.test('3.2.2')).toBe(true)
     expect(byName.get('docuseal').tagPattern.test('v3.2.2')).toBe(true)
   })
+
+  it('declares paperless-ngx strips the v prefix for its ghcr image tag', () => {
+    const paperless = COMPONENTS.find((c) => c.name === 'paperless-ngx')
+    expect(paperless.imageTagStripV).toBe(true)
+    expect(paperless.registry).toBe('ghcr.io')
+    expect(paperless.imageRepository).toBe('paperless-ngx/paperless-ngx')
+  })
+
+  it('declares docuseal on docker.io under the docuseal org with no dead fallback', () => {
+    const docuseal = COMPONENTS.find((c) => c.name === 'docuseal')
+    expect(docuseal.imageTagStripV).toBe(false)
+    expect(docuseal.registry).toBe('docker.io')
+    expect(docuseal.imageRepository).toBe('docuseal/docuseal')
+    expect(docuseal.fallbackRegistry).toBeUndefined()
+    expect(docuseal.fallbackImageRepository).toBeUndefined()
+  })
 })
 
 describe('validateManifest', () => {

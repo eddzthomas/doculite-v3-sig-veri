@@ -25,6 +25,11 @@ export async function resolveComponent(component, { fetchImpl, todayIso }) {
   const release = await fetchLatestStableRelease(fetchImpl, component.owner, component.repo)
   const commitSha = await fetchCommitSha(fetchImpl, component.owner, component.repo, release.tag)
 
+  // Registries tag images by their own convention; the GitHub release tag does not
+  // always match (e.g. ghcr serves paperless-ngx under the bare semver). The GitHub
+  // `tag` field below stays the full release tag — only the image tagRef is mapped.
+  const imageTagRef = component.imageTagStripV ? release.tag.replace(/^v/, '') : release.tag
+
   const registries = [[component.registry, component.imageRepository]]
   if (component.fallbackRegistry !== undefined) {
     registries.push([component.fallbackRegistry, component.fallbackImageRepository])
@@ -34,8 +39,8 @@ export async function resolveComponent(component, { fetchImpl, todayIso }) {
   let image = null
   for (const [registry, repository] of registries) {
     try {
-      const digest = await fetchImageDigest(fetchImpl, registry, repository, release.tag)
-      image = { registry, repository, tagRef: release.tag, digest }
+      const digest = await fetchImageDigest(fetchImpl, registry, repository, imageTagRef)
+      image = { registry, repository, tagRef: imageTagRef, digest }
       break
     } catch (error) {
       lastError = error
