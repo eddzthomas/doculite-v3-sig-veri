@@ -7,6 +7,13 @@
 
 Paperless-ngx and DocuSeal are independently versioned dependencies. Releases pin exact supported versions or immutable image digests. The product never assumes undocumented database schemas, internal routes, or storage layout.
 
+## Current pins
+
+The authoritative record of pinned upstream versions — tag, commit, container digest, and capture
+date — is [`deploy/upstream-versions.json`](../../deploy/upstream-versions.json). Re-pin only
+through the upgrade procedure above; record new evidence with `node scripts/pin-upstream.mjs fetch`
+and confirm agreement with `node scripts/pin-upstream.mjs validate`.
+
 ## Upgrade procedure
 
 1. Review upstream release notes, security notices, license changes, API changes, and migration notes.
