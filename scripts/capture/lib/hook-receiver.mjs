@@ -20,12 +20,20 @@ export function startHookReceiver({ port = 8300 }) {
       res.end('{"received":true}')
     })
   })
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    // Listen errors (e.g. EADDRINUSE) must settle the promise; without this
+    // the promise never resolves or rejects.
+    server.on('error', reject)
     server.listen(port, '127.0.0.1', () =>
       resolve({
         url: `http://127.0.0.1:${port}/hook`,
         deliveries,
-        close: () => new Promise((r) => server.close(r)),
+        close: () =>
+          new Promise((r) => {
+            // Keep-alive sockets would otherwise keep close() pending forever.
+            server.closeAllConnections()
+            server.close(r)
+          }),
       }),
     )
   })

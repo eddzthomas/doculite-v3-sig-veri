@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { sanitizeStep } from './sanitize.mjs'
+import { parseEnvSecrets, sanitizeStep } from './sanitize.mjs'
 
 const MANIFEST = join(import.meta.dirname, '..', '..', '..', 'deploy', 'upstream-versions.json')
 
@@ -41,14 +41,12 @@ export class JourneyRecorder {
       throw new Error('recording contains unredacted credential header — refusing to write')
     }
     // DEV ONLY stack values from deploy/local/.env — leak check only.
-    // Guarded so tests stay independent of whether the local .env exists.
-    const envPath = join(import.meta.dirname, '..', '..', '..', 'deploy', 'local', '.env')
-    if (!existsSync(envPath)) return
-    const env = readFileSync(envPath, 'utf8')
-    for (const line of env.split(/\r?\n/)) {
-      const m = /^([A-Z0-9_]+)=(.+)$/.exec(line)
-      if (m && m[2].length > 8 && text.includes(m[2])) {
-        throw new Error(`recording contains unredacted ${m[1]} value — refusing to write`)
+    // Threshold (>4) and parse are shared with sanitizeStep (parseEnvSecrets)
+    // so the two layers stay aligned; this check is intentionally stricter
+    // than redaction (no PAPERLESS_ADMIN_USER exclusion).
+    for (const { name, value } of parseEnvSecrets()) {
+      if (text.includes(value)) {
+        throw new Error(`recording contains unredacted ${name} value — refusing to write`)
       }
     }
   }
