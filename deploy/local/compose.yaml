@@ -46,6 +46,9 @@ services:
       PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY}
       PAPERLESS_TIME_ZONE: UTC
       PAPERLESS_CONSUMER_POLLING: "5"
+      # auto-provisions the capture-session superuser on first start (dev only)
+      PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USER:-capture-admin}
+      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD}
     ports:
       - "127.0.0.1:${PAPERLESS_PORT:-8100}:8000"
     volumes:
