@@ -64,13 +64,14 @@
     },
     {
       "id": "SIG-007",
-      "file": null,
-      "sha256": null,
+      "file": "sig-007.pdf",
+      "sha256": "931948a6acec8086e1ad486b9b765116e4efe256ee4c41297fa071473ee84d5a",
       "condition": "Completed DocuSeal document",
       "expectedOutcome": "valid_untrusted",
       "construction": "live-captured from pinned docuseal during capture session",
       "certs": [],
-      "capturedFrom": "docuseal"
+      "capturedFrom": "docuseal",
+      "capturedAt": "2026-09-09T03:53:29.065Z"
     },
     {
       "id": "SIG-008",

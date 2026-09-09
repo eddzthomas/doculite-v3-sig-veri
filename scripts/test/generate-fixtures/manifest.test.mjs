@@ -6,7 +6,16 @@ import { describe, expect, it } from 'vitest'
 const ROOT = join(import.meta.dirname, '..', '..', '..')
 const FIXTURES = join(ROOT, 'fixtures', 'signatures')
 
-const GENERATED = ['sig-001', 'sig-002', 'sig-003', 'sig-004', 'sig-005', 'sig-006', 'sig-008']
+const GENERATED = [
+  'sig-001',
+  'sig-002',
+  'sig-003',
+  'sig-004',
+  'sig-005',
+  'sig-006',
+  'sig-007',
+  'sig-008',
+]
 const OUTCOMES = ['unsigned', 'valid_trusted', 'valid_untrusted', 'invalid', 'error']
 
 describe('signatures manifest', () => {
@@ -66,9 +75,11 @@ describe('signatures manifest', () => {
     expect(diffs.length).toBe(1)
   })
 
-  it('sig-007 is a placeholder until the docuseal capture session', () => {
+  it('sig-007 is the live-captured docuseal completion', () => {
     const item = manifest.items.find((i) => i.id === 'SIG-007')
-    expect(item.file).toBeNull()
+    expect(item.file).toBe('sig-007.pdf')
+    expect(item.sha256).toBeTruthy()
+    expect(item.capturedAt).toBeTruthy()
     expect(item.capturedFrom).toBe('docuseal')
   })
 

@@ -1,0 +1,58 @@
+{
+  "journey": "verifier-error",
+  "capturedAt": "2026-09-09T03:53:28.972Z",
+  "upstream": {
+    "service": "docuseal",
+    "imageDigest": "sha256:a8f063f916e39fe326af62111f875200c171ea1f5c6902f3b39f634b9549a3ef"
+  },
+  "steps": [
+    {
+      "name": "unreachable-verifier",
+      "request": {
+        "method": "GET",
+        "path": "http://127.0.0.1:8399/unreachable-endpoint",
+        "headers": {}
+      },
+      "response": {
+        "status": 0,
+        "headers": {},
+        "body": {
+          "error": "ECONNREFUSED"
+        }
+      },
+      "notes": "ECONNREFUSED/timeout observed at network level; product maps to `error`"
+    },
+    {
+      "name": "verifier-malformed-input",
+      "request": {
+        "method": "POST",
+        "path": "/api/tools/verify",
+        "headers": {},
+        "body": {
+          "file": "<base64 of non-PDF bytes>"
+        }
+      },
+      "response": {
+        "status": 422,
+        "headers": {
+          "cache-control": "no-cache",
+          "content-encoding": "gzip",
+          "content-type": "application/json; charset=utf-8",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "transfer-encoding": "chunked",
+          "vary": "Accept-Encoding",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-permitted-cross-domain-policies": "none",
+          "x-request-id": "d81d8114-2e47-44e7-907a-2972b469c6eb",
+          "x-runtime": "0.020013",
+          "x-xss-protection": "0"
+        },
+        "body": {
+          "error": "Malformed PDF"
+        }
+      },
+      "notes": "pinned DocuSeal verifier endpoint (api/tools/verify) rejects malformed PDF bytes with 422 {\"error\":\"Malformed PDF\"}; product maps to `error`, never a validity status"
+    }
+  ]
+}

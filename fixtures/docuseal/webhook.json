@@ -1,0 +1,428 @@
+{
+  "journey": "webhook",
+  "capturedAt": "2026-09-09T03:53:28.934Z",
+  "upstream": {
+    "service": "docuseal",
+    "imageDigest": "sha256:a8f063f916e39fe326af62111f875200c171ea1f5c6902f3b39f634b9549a3ef"
+  },
+  "steps": [
+    {
+      "name": "webhook-api-unavailable",
+      "request": {
+        "method": "POST",
+        "path": "/api/webhooks",
+        "headers": {},
+        "body": {
+          "url": "http://host.docker.internal:8300/hook",
+          "events": ["form.completed"]
+        }
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "access-control-allow-credentials": "true",
+          "access-control-allow-headers": "*",
+          "access-control-allow-methods": "POST, GET, PUT, PATCH, DELETE, OPTIONS",
+          "access-control-allow-origin": "*",
+          "access-control-max-age": "1728000",
+          "content-encoding": "gzip",
+          "content-type": "application/json; charset=utf-8",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "transfer-encoding": "chunked",
+          "vary": "Accept,Accept-Encoding",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-permitted-cross-domain-policies": "none",
+          "x-request-id": "fb243816-9410-4931-9ae3-042ac2c1695e",
+          "x-runtime": "0.007316",
+          "x-xss-protection": "0"
+        },
+        "body": {
+          "status": 404
+        }
+      },
+      "notes": "pinned 3.2.4 has no webhook API routes (GET/POST /api/webhooks -> 404 {\"status\":404}); verified against pinned routes.rb â€” webhook configuration is UI-only (/settings/webhooks)"
+    },
+    {
+      "name": "create-webhook-via-ui",
+      "request": {
+        "via": "browser-ui",
+        "action": "POST /settings/webhooks (form #new_webhook_url)",
+        "headers": {},
+        "body": {
+          "webhook_url": {
+            "url": "http://host.docker.internal:8300/hook",
+            "events": ["form.completed", "submission.completed"]
+          }
+        }
+      },
+      "response": {
+        "status": 302,
+        "headers": {},
+        "body": {
+          "redirectedTo": "/settings/webhooks"
+        }
+      },
+      "notes": "container reaches host receiver via host.docker.internal (Docker Desktop); both form.completed and submission.completed subscribed so the recording captures the submitter-level and submission-level completion payloads; Test mode toggle left OFF"
+    },
+    {
+      "name": "deliveries",
+      "request": {
+        "method": "POST",
+        "path": "http://host.docker.internal:8300/hook",
+        "headers": {},
+        "body": {
+          "observed": "see response"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {},
+        "body": [
+          {
+            "receivedAt": "2026-09-09T03:53:07.253Z",
+            "method": "POST",
+            "path": "/hook",
+            "headerNames": [
+              "user-agent",
+              "content-type",
+              "x-docuseal-signature",
+              "accept-encoding",
+              "accept",
+              "host",
+              "content-length"
+            ],
+            "signatureHeader": {
+              "present": true,
+              "shape": "1788925987.<hmac-sha256-hex>"
+            },
+            "body": {
+              "event_type": "form.viewed",
+              "timestamp": "2026-09-09T03:53:07.230Z",
+              "data": {
+                "id": 6,
+                "submission_id": 6,
+                "email": "signer@example.com",
+                "phone": null,
+                "name": "Capture Fixture Signer",
+                "ua": null,
+                "ip": null,
+                "sent_at": null,
+                "opened_at": "2026-09-09T03:53:07.164Z",
+                "completed_at": null,
+                "declined_at": null,
+                "created_at": "2026-09-09T03:53:06.873Z",
+                "updated_at": "2026-09-09T03:53:07.165Z",
+                "external_id": null,
+                "metadata": {},
+                "status": "opened",
+                "application_key": null,
+                "decline_reason": null,
+                "role": "First Party",
+                "preferences": {
+                  "send_email": false,
+                  "send_sms": false
+                },
+                "values": [],
+                "documents": [],
+                "audit_log_url": null,
+                "submission_url": "<redacted:capability-url>",
+                "template": {
+                  "id": 10,
+                  "name": "M0C Capture Template",
+                  "external_id": null,
+                  "created_at": "2026-09-09T03:52:55.748Z",
+                  "updated_at": "2026-09-09T03:53:00.833Z",
+                  "folder_name": "Default"
+                },
+                "submission": {
+                  "id": 6,
+                  "audit_log_url": null,
+                  "combined_document_url": null,
+                  "status": "pending",
+                  "url": "<redacted:capability-url>",
+                  "variables": {},
+                  "created_at": "2026-09-09T03:53:06.870Z"
+                }
+              }
+            }
+          },
+          {
+            "receivedAt": "2026-09-09T03:53:08.027Z",
+            "method": "POST",
+            "path": "/hook",
+            "headerNames": [
+              "user-agent",
+              "content-type",
+              "x-docuseal-signature",
+              "accept-encoding",
+              "accept",
+              "host",
+              "content-length"
+            ],
+            "signatureHeader": {
+              "present": true,
+              "shape": "1788925987.<hmac-sha256-hex>"
+            },
+            "body": {
+              "event_type": "form.started",
+              "timestamp": "2026-09-09T03:53:07.966Z",
+              "data": {
+                "id": 6,
+                "submission_id": 6,
+                "email": "signer@example.com",
+                "phone": null,
+                "name": "Capture Fixture Signer",
+                "ua": null,
+                "ip": null,
+                "sent_at": null,
+                "opened_at": "2026-09-09T03:53:07.164Z",
+                "completed_at": null,
+                "declined_at": null,
+                "created_at": "2026-09-09T03:53:06.873Z",
+                "updated_at": "2026-09-09T03:53:07.165Z",
+                "external_id": null,
+                "metadata": {},
+                "status": "opened",
+                "application_key": null,
+                "decline_reason": null,
+                "role": "First Party",
+                "preferences": {
+                  "send_email": false,
+                  "send_sms": false
+                },
+                "values": [],
+                "documents": [],
+                "audit_log_url": null,
+                "submission_url": "<redacted:capability-url>",
+                "template": {
+                  "id": 10,
+                  "name": "M0C Capture Template",
+                  "external_id": null,
+                  "created_at": "2026-09-09T03:52:55.748Z",
+                  "updated_at": "2026-09-09T03:53:00.833Z",
+                  "folder_name": "Default"
+                },
+                "submission": {
+                  "id": 6,
+                  "audit_log_url": null,
+                  "combined_document_url": null,
+                  "status": "pending",
+                  "url": "<redacted:capability-url>",
+                  "variables": {},
+                  "created_at": "2026-09-09T03:53:06.870Z"
+                }
+              }
+            }
+          },
+          {
+            "receivedAt": "2026-09-09T03:53:12.938Z",
+            "method": "POST",
+            "path": "/hook",
+            "headerNames": [
+              "user-agent",
+              "content-type",
+              "x-docuseal-signature",
+              "accept-encoding",
+              "accept",
+              "host",
+              "content-length"
+            ],
+            "signatureHeader": {
+              "present": true,
+              "shape": "1788925992.<hmac-sha256-hex>"
+            },
+            "body": {
+              "event_type": "form.completed",
+              "timestamp": "2026-09-09T03:53:12.910Z",
+              "data": {
+                "id": 6,
+                "submission_id": 6,
+                "email": "signer@example.com",
+                "phone": null,
+                "name": "Capture Fixture Signer",
+                "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.12 Safari/537.36",
+                "ip": "172.22.0.1",
+                "sent_at": null,
+                "opened_at": "2026-09-09T03:53:07.164Z",
+                "completed_at": "2026-09-09T03:53:11.593Z",
+                "declined_at": null,
+                "created_at": "2026-09-09T03:53:06.873Z",
+                "updated_at": "2026-09-09T03:53:11.601Z",
+                "external_id": null,
+                "metadata": {},
+                "status": "completed",
+                "application_key": null,
+                "decline_reason": null,
+                "role": "First Party",
+                "preferences": {
+                  "send_email": false,
+                  "send_sms": false
+                },
+                "values": [
+                  {
+                    "field": "Text Field 1",
+                    "value": "Capture Fixture Signer"
+                  },
+                  {
+                    "field": "Signature Field 1",
+                    "value": "<redacted:capability-url>"
+                  }
+                ],
+                "documents": [
+                  {
+                    "name": "sig-007-base",
+                    "url": "<redacted:capability-url>"
+                  }
+                ],
+                "audit_log_url": "<redacted:capability-url>",
+                "submission_url": "<redacted:capability-url>",
+                "template": {
+                  "id": 10,
+                  "name": "M0C Capture Template",
+                  "external_id": null,
+                  "created_at": "2026-09-09T03:52:55.748Z",
+                  "updated_at": "2026-09-09T03:53:00.833Z",
+                  "folder_name": "Default"
+                },
+                "submission": {
+                  "id": 6,
+                  "audit_log_url": "<redacted:capability-url>",
+                  "combined_document_url": null,
+                  "status": "completed",
+                  "url": "<redacted:capability-url>",
+                  "variables": {},
+                  "created_at": "2026-09-09T03:53:06.870Z"
+                }
+              }
+            }
+          },
+          {
+            "receivedAt": "2026-09-09T03:53:12.940Z",
+            "method": "POST",
+            "path": "/hook",
+            "headerNames": [
+              "user-agent",
+              "content-type",
+              "x-docuseal-signature",
+              "accept-encoding",
+              "accept",
+              "host",
+              "content-length"
+            ],
+            "signatureHeader": {
+              "present": true,
+              "shape": "1788925992.<hmac-sha256-hex>"
+            },
+            "body": {
+              "event_type": "submission.completed",
+              "timestamp": "2026-09-09T03:53:12.924Z",
+              "data": {
+                "id": 6,
+                "name": null,
+                "slug": "Fnso9HCY3Wg33J",
+                "source": "api",
+                "submitters_order": "preserved",
+                "expire_at": null,
+                "created_at": "2026-09-09T03:53:06.870Z",
+                "updated_at": "2026-09-09T03:53:12.796Z",
+                "archived_at": null,
+                "submitters": [
+                  {
+                    "id": 6,
+                    "slug": "gKUa4oWziVbYkf",
+                    "uuid": "984b9aac-077d-4c4a-8239-0bccb7825018",
+                    "name": "Capture Fixture Signer",
+                    "email": "signer@example.com",
+                    "phone": null,
+                    "completed_at": "2026-09-09T03:53:11.593Z",
+                    "declined_at": null,
+                    "external_id": null,
+                    "submission_id": 6,
+                    "metadata": {},
+                    "opened_at": "2026-09-09T03:53:07.164Z",
+                    "sent_at": null,
+                    "created_at": "2026-09-09T03:53:06.873Z",
+                    "updated_at": "2026-09-09T03:53:11.601Z",
+                    "status": "completed",
+                    "application_key": null,
+                    "values": [
+                      {
+                        "field": "Text Field 1",
+                        "value": "Capture Fixture Signer"
+                      },
+                      {
+                        "field": "Signature Field 1",
+                        "value": "<redacted:capability-url>"
+                      }
+                    ],
+                    "documents": [
+                      {
+                        "name": "sig-007-base",
+                        "url": "<redacted:capability-url>"
+                      }
+                    ],
+                    "preferences": {
+                      "send_email": false,
+                      "send_sms": false
+                    },
+                    "role": "First Party"
+                  }
+                ],
+                "template": {
+                  "id": 10,
+                  "name": "M0C Capture Template",
+                  "external_id": null,
+                  "created_at": "2026-09-09T03:52:55.748Z",
+                  "updated_at": "2026-09-09T03:53:00.833Z",
+                  "folder_name": "Default"
+                },
+                "created_by_user": {
+                  "id": 1,
+                  "email": "<redacted:admin-email>",
+                  "first_name": "Capture",
+                  "last_name": "Admin"
+                },
+                "variables": {},
+                "submission_events": [
+                  {
+                    "id": 20,
+                    "submitter_id": 6,
+                    "event_type": "view_form",
+                    "event_timestamp": "2026-09-09T03:53:07.174Z",
+                    "data": {}
+                  },
+                  {
+                    "id": 21,
+                    "submitter_id": 6,
+                    "event_type": "start_form",
+                    "event_timestamp": "2026-09-09T03:53:07.920Z",
+                    "data": {}
+                  },
+                  {
+                    "id": 22,
+                    "submitter_id": 6,
+                    "event_type": "complete_form",
+                    "event_timestamp": "2026-09-09T03:53:11.594Z",
+                    "data": {}
+                  }
+                ],
+                "documents": [
+                  {
+                    "name": "sig-007-base",
+                    "url": "<redacted:capability-url>"
+                  }
+                ],
+                "audit_log_url": "<redacted:capability-url>",
+                "combined_document_url": null,
+                "status": "completed",
+                "completed_at": "2026-09-09T03:53:11.593Z"
+              }
+            }
+          }
+        ]
+      },
+      "notes": "count=4; event types observed: form.viewed,form.started,form.completed,submission.completed; signature header X-Docuseal-Signature shape <unix-ts>.<hmac-sha256-hex> (presence recorded per delivery); duplicates: none; notification-only â€” product must reconcile against an authoritative API read (AGENTS.md invariant)"
+    }
+  ]
+}

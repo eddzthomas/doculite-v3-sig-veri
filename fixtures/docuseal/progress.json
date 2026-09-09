@@ -1,0 +1,225 @@
+{
+  "journey": "progress",
+  "capturedAt": "2026-09-09T03:53:13.798Z",
+  "upstream": {
+    "service": "docuseal",
+    "imageDigest": "sha256:a8f063f916e39fe326af62111f875200c171ea1f5c6902f3b39f634b9549a3ef"
+  },
+  "steps": [
+    {
+      "name": "progress-pending",
+      "request": {
+        "method": "GET",
+        "path": "/api/submissions/6",
+        "headers": {}
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-encoding": "gzip",
+          "content-type": "application/json; charset=utf-8",
+          "etag": "W/\"82f35dfca2f886f8b9e4a999a477e514\"",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "transfer-encoding": "chunked",
+          "vary": "Accept-Encoding",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-permitted-cross-domain-policies": "none",
+          "x-request-id": "19ba6c55-1e3d-4cba-9ad3-139db4a3668c",
+          "x-runtime": "0.054981",
+          "x-xss-protection": "0"
+        },
+        "body": {
+          "id": 6,
+          "name": null,
+          "slug": "Fnso9HCY3Wg33J",
+          "source": "api",
+          "submitters_order": "preserved",
+          "expire_at": null,
+          "created_at": "2026-09-09T03:53:06.870Z",
+          "updated_at": "2026-09-09T03:53:06.870Z",
+          "archived_at": null,
+          "submitters": [
+            {
+              "id": 6,
+              "slug": "gKUa4oWziVbYkf",
+              "uuid": "984b9aac-077d-4c4a-8239-0bccb7825018",
+              "name": "Capture Fixture Signer",
+              "email": "signer@example.com",
+              "phone": null,
+              "completed_at": null,
+              "declined_at": null,
+              "external_id": null,
+              "submission_id": 6,
+              "metadata": {},
+              "opened_at": null,
+              "sent_at": null,
+              "created_at": "2026-09-09T03:53:06.873Z",
+              "updated_at": "2026-09-09T03:53:06.873Z",
+              "status": "awaiting",
+              "application_key": null,
+              "values": [],
+              "documents": [],
+              "preferences": {
+                "send_email": false,
+                "send_sms": false
+              },
+              "role": "First Party"
+            }
+          ],
+          "template": {
+            "id": 10,
+            "name": "M0C Capture Template",
+            "external_id": null,
+            "created_at": "2026-09-09T03:52:55.748Z",
+            "updated_at": "2026-09-09T03:53:00.833Z",
+            "folder_name": "Default"
+          },
+          "created_by_user": {
+            "id": 1,
+            "email": "<redacted:admin-email>",
+            "first_name": "Capture",
+            "last_name": "Admin"
+          },
+          "variables": {},
+          "submission_events": [],
+          "documents": [],
+          "audit_log_url": null,
+          "combined_document_url": null,
+          "status": "pending",
+          "completed_at": null
+        }
+      },
+      "notes": "pre-completion status vocabulary (submission.status + submitters[].status); capability URLs scrubbed"
+    },
+    {
+      "name": "progress-completed",
+      "request": {
+        "method": "GET",
+        "path": "/api/submissions/6",
+        "headers": {}
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-encoding": "gzip",
+          "content-type": "application/json; charset=utf-8",
+          "etag": "W/\"13e9a496cb1ced52309251e0beaf00b7\"",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "transfer-encoding": "chunked",
+          "vary": "Accept-Encoding",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-permitted-cross-domain-policies": "none",
+          "x-request-id": "9bcfdcca-49ee-4942-b5ec-65bad4562a77",
+          "x-runtime": "2.067694",
+          "x-xss-protection": "0"
+        },
+        "body": {
+          "id": 6,
+          "name": null,
+          "slug": "Fnso9HCY3Wg33J",
+          "source": "api",
+          "submitters_order": "preserved",
+          "expire_at": null,
+          "created_at": "2026-09-09T03:53:06.870Z",
+          "updated_at": "2026-09-09T03:53:07.910Z",
+          "archived_at": null,
+          "submitters": [
+            {
+              "id": 6,
+              "slug": "gKUa4oWziVbYkf",
+              "uuid": "984b9aac-077d-4c4a-8239-0bccb7825018",
+              "name": "Capture Fixture Signer",
+              "email": "signer@example.com",
+              "phone": null,
+              "completed_at": "2026-09-09T03:53:11.593Z",
+              "declined_at": null,
+              "external_id": null,
+              "submission_id": 6,
+              "metadata": {},
+              "opened_at": "2026-09-09T03:53:07.164Z",
+              "sent_at": null,
+              "created_at": "2026-09-09T03:53:06.873Z",
+              "updated_at": "2026-09-09T03:53:11.601Z",
+              "status": "completed",
+              "application_key": null,
+              "values": [
+                {
+                  "field": "Text Field 1",
+                  "value": "Capture Fixture Signer"
+                },
+                {
+                  "field": "Signature Field 1",
+                  "value": "<redacted:capability-url>"
+                }
+              ],
+              "documents": [
+                {
+                  "name": "sig-007-base",
+                  "url": "<redacted:capability-url>"
+                }
+              ],
+              "preferences": {
+                "send_email": false,
+                "send_sms": false
+              },
+              "role": "First Party"
+            }
+          ],
+          "template": {
+            "id": 10,
+            "name": "M0C Capture Template",
+            "external_id": null,
+            "created_at": "2026-09-09T03:52:55.748Z",
+            "updated_at": "2026-09-09T03:53:00.833Z",
+            "folder_name": "Default"
+          },
+          "created_by_user": {
+            "id": 1,
+            "email": "<redacted:admin-email>",
+            "first_name": "Capture",
+            "last_name": "Admin"
+          },
+          "variables": {},
+          "submission_events": [
+            {
+              "id": 20,
+              "submitter_id": 6,
+              "event_type": "view_form",
+              "event_timestamp": "2026-09-09T03:53:07.174Z",
+              "data": {}
+            },
+            {
+              "id": 21,
+              "submitter_id": 6,
+              "event_type": "start_form",
+              "event_timestamp": "2026-09-09T03:53:07.920Z",
+              "data": {}
+            },
+            {
+              "id": 22,
+              "submitter_id": 6,
+              "event_type": "complete_form",
+              "event_timestamp": "2026-09-09T03:53:11.594Z",
+              "data": {}
+            }
+          ],
+          "documents": [
+            {
+              "name": "sig-007-base",
+              "url": "<redacted:capability-url>"
+            }
+          ],
+          "audit_log_url": "<redacted:capability-url>",
+          "combined_document_url": null,
+          "status": "completed",
+          "completed_at": "2026-09-09T03:53:11.593Z"
+        }
+      },
+      "notes": "post-completion status vocabulary; capability URLs scrubbed"
+    }
+  ]
+}
