@@ -1,0 +1,48 @@
+{
+  "journey": "preview",
+  "capturedAt": "2026-09-09T02:06:57.518Z",
+  "upstream": {
+    "service": "paperless-ngx",
+    "imageDigest": "sha256:aa810a36942c63d4ee70d00eda7236cd3d6acfb7eb3f7987fb568ed14df8817a"
+  },
+  "steps": [
+    {
+      "name": "thumbnail",
+      "request": {
+        "method": "GET",
+        "path": "/api/documents/4/thumb/",
+        "headers": {}
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "allow": "GET, HEAD, OPTIONS",
+          "cache-control": "no-cache",
+          "content-disposition": "inline; filename=\"0000004.webp\"",
+          "content-encoding": "gzip",
+          "content-language": "en-us",
+          "content-type": "image/webp",
+          "cross-origin-opener-policy": "same-origin",
+          "date": "Wed, 09 Sep 2026 02:06:57 GMT",
+          "etag": "W/\"04efb22bb7709c1cafb5921b56084cade0343f03e411241f98ec5275165775f2\"",
+          "last-modified": "Wed, 09 Sep 2026 02:06:56 GMT",
+          "referrer-policy": "same-origin",
+          "server": "granian",
+          "transfer-encoding": "chunked",
+          "vary": "Accept, Accept-Language, origin, Cookie, Accept-Encoding",
+          "x-api-version": "10",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-version": "3.1.3"
+        },
+        "body": {
+          "binary": true,
+          "byteLength": 2680,
+          "sha256": "8ba80a9222eab9570551fd26aaa677210fb0931851c12c7975f01877fe3e98cc",
+          "sha256Note": "(bytes not committed; sha256 recorded for original-bytes verification)"
+        }
+      },
+      "notes": "content-type + status; bytes not committed, sha256 of thumb recorded"
+    }
+  ]
+}

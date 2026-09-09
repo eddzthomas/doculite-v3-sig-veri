@@ -1,0 +1,164 @@
+{
+  "journey": "metadata",
+  "capturedAt": "2026-09-09T02:06:57.724Z",
+  "upstream": {
+    "service": "paperless-ngx",
+    "imageDigest": "sha256:aa810a36942c63d4ee70d00eda7236cd3d6acfb7eb3f7987fb568ed14df8817a"
+  },
+  "steps": [
+    {
+      "name": "list-custom-fields",
+      "request": {
+        "method": "GET",
+        "path": "/api/custom_fields/",
+        "headers": {}
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "allow": "GET, POST, HEAD, OPTIONS",
+          "content-language": "en-us",
+          "content-length": "52",
+          "content-type": "application/json",
+          "cross-origin-opener-policy": "same-origin",
+          "date": "Wed, 09 Sep 2026 02:06:57 GMT",
+          "referrer-policy": "same-origin",
+          "server": "granian",
+          "vary": "Accept, Accept-Language, origin, Cookie",
+          "x-api-version": "10",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-version": "3.1.3"
+        },
+        "body": {
+          "count": 0,
+          "next": null,
+          "previous": null,
+          "results": []
+        }
+      },
+      "notes": null
+    },
+    {
+      "name": "create-custom-field",
+      "request": {
+        "method": "POST",
+        "path": "/api/custom_fields/",
+        "headers": {},
+        "body": {
+          "name": "fixture_note",
+          "data_type": "string"
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "allow": "GET, POST, HEAD, OPTIONS",
+          "content-language": "en-us",
+          "content-length": "69",
+          "content-type": "application/json",
+          "cross-origin-opener-policy": "same-origin",
+          "date": "Wed, 09 Sep 2026 02:06:57 GMT",
+          "referrer-policy": "same-origin",
+          "server": "granian",
+          "vary": "Accept, Accept-Language, origin, Cookie",
+          "x-api-version": "10",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-version": "3.1.3"
+        },
+        "body": {
+          "id": 3,
+          "name": "fixture_note",
+          "data_type": "string",
+          "extra_data": null
+        }
+      },
+      "notes": null
+    },
+    {
+      "name": "assign-custom-field",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/documents/4/",
+        "headers": {},
+        "body": {
+          "custom_fields": [
+            {
+              "field": 3,
+              "value": "captured by m0c"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "allow": "GET, PUT, PATCH, DELETE, HEAD, OPTIONS",
+          "content-encoding": "gzip",
+          "content-language": "en-us",
+          "content-length": "488",
+          "content-type": "application/json",
+          "cross-origin-opener-policy": "same-origin",
+          "date": "Wed, 09 Sep 2026 02:06:57 GMT",
+          "referrer-policy": "same-origin",
+          "server": "granian",
+          "vary": "Accept, Accept-Language, origin, Cookie, Accept-Encoding",
+          "x-api-version": "10",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-version": "3.1.3"
+        },
+        "body": {
+          "id": 4,
+          "correspondent": null,
+          "document_type": null,
+          "storage_path": null,
+          "title": "sig-001",
+          "content": "Fixture SIG-001 (unsigned)\nSynthetic Doculite fixture — no real person signed this.",
+          "tags": [],
+          "created": "2026-09-09",
+          "created_date": "2026-09-09",
+          "modified": "2026-09-09T02:06:57.620989Z",
+          "added": "2026-09-09T02:06:56.366972Z",
+          "deleted_at": null,
+          "archive_serial_number": null,
+          "original_file_name": "sig-001.pdf",
+          "archived_file_name": null,
+          "duplicate_documents": [],
+          "owner": 2,
+          "permissions": {
+            "view": {
+              "users": [],
+              "groups": []
+            },
+            "change": {
+              "users": [],
+              "groups": []
+            }
+          },
+          "notes": [],
+          "custom_fields": [
+            {
+              "value": "captured by m0c",
+              "field": 3
+            }
+          ],
+          "page_count": 1,
+          "mime_type": "application/pdf",
+          "root_document": null,
+          "versions": [
+            {
+              "id": 4,
+              "added": "2026-09-09T02:06:56.366972Z",
+              "version_label": null,
+              "checksum": "04efb22bb7709c1cafb5921b56084cade0343f03e411241f98ec5275165775f2",
+              "is_root": true
+            }
+          ]
+        }
+      },
+      "notes": "field types + permission requirement"
+    }
+  ]
+}
