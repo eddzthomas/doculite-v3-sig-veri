@@ -8,7 +8,9 @@ import type { Provenance } from './types.ts'
  * integrity or trust — it is an independent origin fact.
  */
 export const PROVENANCE_HEURISTIC_NOTE =
-  'provenance: M0-D heuristic — signer-cert subject CN match (submission correlation deferred to M1+)'
+  'provenance: M0-D heuristic — signer-cert subject CN match (submission correlation deferred to M1+). ' +
+  'An attacker-controlled CN containing DocuSeal can claim docuseal provenance; this is acceptable ' +
+  'because provenance is an origin fact that cannot affect integrity, trust, or status (invariant tested).'
 
 // Calibrated against the live SIG-007 capture: its signer subject is
 // 'C=AT, O=DocuSeal, CN=DocuSeal', so the CN value contains 'DocuSeal'.

@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { ADAPTER_VERSION } from '../src/result.ts'
@@ -179,11 +180,35 @@ describe('SIG-009 scenario: verifier failure paths never produce a validity stat
     expect(detail).not.toMatch(/[0-9a-f]{64}/)
   })
 
-  it('defective policy path → error, policyVersion null (fail-safe, never blanket-untrusted)', () => {
+  it('missing policy file → error, policyVersion null, coarse not-found reason (no paths)', () => {
     const result = verifyPdf(pdf('sig-002.pdf'), { policyPath: join(SIG, 'no-such-policy.json') })
     expect(result.status).toBe('error')
     expect(result.trust).toBe('error')
     expect(result.evidence.policyVersion).toBeNull()
-    expect(result.evidence.errorDetail).toMatch(/^policy-load/)
+    expect(result.evidence.errorDetail).toBe('policy-load: trust policy not found')
+    expect(result.evidence.errorDetail).not.toContain(SIG)
+  })
+
+  it('schema-invalid policy file → error with a coarse invalid-schema reason (no paths)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'doculite-policy-'))
+    try {
+      const policyPath = join(dir, 'bad-policy.json')
+      writeFileSync(policyPath, '{ not json', 'utf8')
+      const result = verifyPdf(pdf('sig-002.pdf'), { policyPath })
+      expect(result.status).toBe('error')
+      expect(result.evidence.policyVersion).toBeNull()
+      expect(result.evidence.errorDetail).toBe(
+        'policy-load: trust policy is unreadable or not schema-valid',
+      )
+      expect(result.evidence.errorDetail).not.toContain(dir)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('verifyPdf never throws for input conditions (fail-safe contract pin)', () => {
+    // a directory as policyPath exercises the unreadable-policy failure path
+    expect(() => verifyPdf(pdf('sig-002.pdf'), { policyPath: SIG })).not.toThrow()
+    expect(verifyPdf(pdf('sig-002.pdf'), { policyPath: SIG }).status).toBe('error')
   })
 })

@@ -180,9 +180,11 @@ function failureResult(
 /**
  * Public API: verify the exact document bytes end-to-end — integrity →
  * per-signature trust → per-signature provenance → fail-safe roll-up →
- * status → evidence. Pure and synchronous; throws nothing (all failures
- * surface as `error` results with step-named evidence). The evidence `raw`
- * embeds signature container hex (SECURITY: never log or persist it).
+ * status → evidence. Pure and synchronous; never throws for input
+ * conditions — every failure (unparseable bytes, defective policy, or the
+ * defensive orchestration guard, which is itself wrapped fail-safe)
+ * surfaces as an `error` result with step-named evidence. The evidence
+ * `raw` embeds signature container hex (SECURITY: never log or persist it).
  */
 export function verifyPdf(bytes: Uint8Array, options: VerifyPdfOptions = {}): VerificationResult {
   // Policy first (throwing loader): a defective policy fails safe to a
@@ -191,19 +193,43 @@ export function verifyPdf(bytes: Uint8Array, options: VerifyPdfOptions = {}): Ve
   let policy: TrustPolicy
   try {
     policy = loadPolicy(options.policyPath ?? DEFAULT_POLICY_PATH)
-  } catch {
-    return failureResult(bytes, 'policy-load: trust policy could not be loaded', null)
+  } catch (e) {
+    // Coarse reason class only (finding 3): not-found vs unreadable/not
+    // schema-valid — never a path, credential, or raw error message.
+    const notFound =
+      typeof e === 'object' &&
+      e !== null &&
+      'code' in e &&
+      (e as { code: unknown }).code === 'ENOENT'
+    return failureResult(
+      bytes,
+      notFound
+        ? 'policy-load: trust policy not found'
+        : 'policy-load: trust policy is unreadable or not schema-valid',
+      null,
+    )
   }
 
   const evaluation = evaluateIntegrity(bytes)
-  // Same pure scan evaluateIntegrity ran → index-aligned with its summaries.
+  // Duplicate pure scan, kept intentionally (finding 2): same bytes → same
+  // deterministic result, so the lists are index-aligned by construction;
+  // the cost is one regex pass, and evaluateIntegrity's contract stays
+  // unchanged (its summaries intentionally do not carry the scan).
   const scanned = scanSignatures(bytes)
+  if (evaluation.perSignature.length !== scanned.length) {
+    // Fail-safe wrap chosen (finding 1): verifyPdf never throws for input
+    // conditions — a defensive misalignment becomes an error result.
+    return failureResult(
+      bytes,
+      'orchestration: integrity summaries and scanned signatures misaligned',
+      policy.version,
+    )
+  }
 
   const perSignature: Array<PerSignatureSummary> = evaluation.perSignature.map((entry, index) => {
-    const aligned = scanned[index]
-    if (!aligned) {
-      throw new Error('orchestration: integrity summaries and scanned signatures misaligned')
-    }
+    // Index-aligned by construction (length-checked above); the malformed
+    // fallback keeps the mapping total without any throw path.
+    const aligned = scanned[index] ?? { malformed: true }
     const trust = evaluatePerSignatureTrust(entry, aligned, policy)
     const provenance: Provenance = determineProvenance(entry.signerSubject)
     return {
