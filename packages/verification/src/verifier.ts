@@ -580,7 +580,9 @@ function facts(
   }
 }
 
-const STAGE_NOTE = 'integrity-only pass: trust and provenance are not evaluated here'
+// Exported for the Task 4 orchestrator, which must distinguish the stage
+// marker from real evaluation notes when naming an error step in evidence.
+export const STAGE_NOTE = 'integrity-only pass: trust and provenance are not evaluated here'
 
 function coveredRangesOf(byteRange: ScannedSignature['byteRange']): Array<CoveredRange> {
   const [s1, l1, s2, l2] = byteRange
