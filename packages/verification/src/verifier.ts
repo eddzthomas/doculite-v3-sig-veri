@@ -263,6 +263,13 @@ function parseSignedDataEnvelope(der: Uint8Array): {
  * bytes (same convention as `certificateFingerprint`). Throws ParseError
  * when the signer cannot be located or no issuer resolves to a self-signed
  * root — the caller maps that to trust `error` (never a validity status).
+ *
+ * SECURITY (RISK-007): no chain-link signature or AKI/serial validation is
+ * performed — a leaf whose issuer DN bytes equal a committed anchor's
+ * subject DN terminates here, so the trust claim is forgeable. Acceptable
+ * only while the adapter stays on the offline fixture proof (Draft policy);
+ * path validation is a BLOCKING M1 security prerequisite before any
+ * real-document path (docs/delivery/risk-register.md).
  */
 export function extractSignerChain(
   sig: ScannedSignature,
@@ -430,15 +437,15 @@ export function verifySignature(bytes: Uint8Array, sig: ScannedSignature): Signa
 
     // Signer certificate: match the issuerAndSerialNumber serial. Both hex
     // strings derive from the exact INTEGER content, so equality is sound.
+    // Serial position comes from toEmbeddedCert, which skips the OPTIONAL
+    // [0] EXPLICIT version — a version-less signer certificate must not
+    // mis-map its issuer TLV as the serial (would fail-safe to error).
     const serialTlv = child(der, issuerAndSerial, 1)
     const serialHex = Buffer.from(contentBytes(der, serialTlv)).toString('hex')
     const certList = certificates === null ? [] : children(der, certificates)
     let certTlv: DerTlv | null = null
     for (const candidate of certList) {
-      expectTag(candidate, TAG_SEQUENCE, 'cms-parse', 'certificate structure unexpected')
-      const tbs = child(der, candidate, 0)
-      const certSerial = child(der, tbs, 1)
-      if (Buffer.from(contentBytes(der, certSerial)).toString('hex') === serialHex) {
+      if (toEmbeddedCert(der, candidate).serialHex === serialHex) {
         certTlv = candidate
         break
       }
