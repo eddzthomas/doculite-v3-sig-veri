@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "anchors": [
+    {
+      "name": "root-a",
+      "sha256": "78b24eb6dd6d02a2d07891f30b277b5a01778641c026208d516e07b26c26542a"
+    }
+  ]
+}
