@@ -134,6 +134,17 @@ function sha256Hex(bytes: Uint8Array): string {
 }
 
 /**
+ * SHA-256 hex fingerprint over a certificate's exact DER bytes (the full
+ * certificate TLV, byte-for-byte). This is the single fingerprint convention
+ * shared by signer-cert facts (SignatureCryptoFacts.signerCertFingerprint)
+ * and trust-policy anchors, so anchor-vs-signer comparisons are always
+ * apples-to-apples — never re-encode, always hash the exact DER stream.
+ */
+export function certificateFingerprint(der: Uint8Array): string {
+  return sha256Hex(der)
+}
+
+/**
  * ByteRange scan + /Contents extraction. Pairing rule: each /ByteRange is
  * paired with the first /Contents occurring after it and before the next
  * /ByteRange (PDF signature dictionaries emit /ByteRange first). Odd or
@@ -181,6 +192,163 @@ export function scanSignatures(bytes: Uint8Array): Array<ScannedSignatureOrMalfo
 }
 
 /**
+ * Pinned ContentInfo → SignedData walk shared by signature verification and
+ * trust-chain extraction, so both consumers agree on the same structure
+ * rules. Returns the certificates [0] and signerInfos SET TLVs.
+ */
+function parseSignedDataEnvelope(der: Uint8Array): {
+  certificates: DerTlv | null
+  signerInfos: DerTlv | null
+} {
+  // ContentInfo ::= SEQUENCE { contentType OID, content [0] EXPLICIT }
+  const root = readTlv(der, 0)
+  expectTag(root, TAG_SEQUENCE, 'cms-parse', 'container is not parseable as PKCS#7 SignedData')
+  const contentInfo = children(der, root)
+  const oidTlv = contentInfo[0]
+  const contentTlv = contentInfo[1]
+  if (!oidTlv || !contentTlv || contentInfo.length !== 2) {
+    throw new ParseError('cms-parse', 'ContentInfo structure unexpected')
+  }
+  if (decodeOid(der, oidTlv) !== OID_SIGNED_DATA) {
+    throw new ParseError('cms-parse', 'container is not SignedData')
+  }
+  expectTag(contentTlv, TAG_CONTEXT_0, 'cms-parse', 'SignedData wrapper unexpected')
+  const wrapper = readTlv(der, contentTlv.contentStart)
+  expectTag(wrapper, TAG_SEQUENCE, 'cms-parse', 'SignedData structure unexpected')
+
+  // SignedData ::= SEQUENCE { version, digestAlgorithms SET, contentInfo,
+  // certificates [0] IMPLICIT OPTIONAL, crls [1] OPTIONAL, signerInfos SET }
+  let innerContentInfo: DerTlv | null = null
+  let certificates: DerTlv | null = null
+  let signerInfos: DerTlv | null = null
+  for (const part of children(der, wrapper)) {
+    if (part.tag === TAG_INTEGER && innerContentInfo === null) {
+      // version
+      continue
+    }
+    if (part.tag === TAG_SEQUENCE && innerContentInfo === null) {
+      // inner detached contentInfo
+      innerContentInfo = part
+      continue
+    }
+    if (part.tag === TAG_SET) {
+      // digestAlgorithms precedes the inner contentInfo; signerInfos follows it
+      if (innerContentInfo === null) continue
+      if (signerInfos !== null) throw new ParseError('cms-parse', 'SignedData structure unexpected')
+      signerInfos = part
+      continue
+    }
+    if (part.tag === TAG_CONTEXT_0 && innerContentInfo !== null) {
+      certificates = part
+      continue
+    }
+    if (part.tag === TAG_CONTEXT_1 && innerContentInfo !== null) {
+      // CRLs are out of scope at M0-D (no revocation claims)
+      continue
+    }
+    throw new ParseError('cms-parse', 'SignedData structure unexpected')
+  }
+  return { certificates, signerInfos }
+}
+
+/**
+ * Trust-chain extraction: walks the certificates from the signer up to a
+ * self-signed root, matching each issuer to a certificate whose subject DER
+ * is byte-identical. Candidates are the certificates embedded in the CMS
+ * container first, then `extraCerts` — the caller's complete known-root
+ * store for containers that embed only the leaf (fixture roots at M0-D).
+ * The store must be a SUPERSET of the policy anchors: which root is trusted
+ * is decided solely by the policy, never by candidate availability.
+ * Returns the chain leaf-first, root-last, as each certificate's exact DER
+ * bytes (same convention as `certificateFingerprint`). Throws ParseError
+ * when the signer cannot be located or no issuer resolves to a self-signed
+ * root — the caller maps that to trust `error` (never a validity status).
+ */
+export function extractSignerChain(
+  sig: ScannedSignature,
+  extraCerts: Array<Uint8Array> = [],
+): Array<Uint8Array> {
+  const der = Buffer.from(sig.contentsHex, 'hex')
+  const { certificates, signerInfos } = parseSignedDataEnvelope(der)
+  const signerTlv = signerInfos === null ? undefined : children(der, signerInfos)[0]
+  if (!signerTlv) throw new ParseError('chain-parse', 'no signerInfos')
+  // SignerInfo ::= SEQUENCE { version, issuerAndSerialNumber, ... }
+  const issuerAndSerial = child(der, signerTlv, 1)
+  expectTag(issuerAndSerial, TAG_SEQUENCE, 'chain-parse', 'SignerInfo structure unexpected')
+  const serialHex = Buffer.from(contentBytes(der, child(der, issuerAndSerial, 1))).toString('hex')
+
+  const certList = certificates === null ? [] : children(der, certificates)
+  const embedded = certList.map((certTlv) => toEmbeddedCert(der, certTlv))
+  const extras = extraCerts.map((certDer) => toEmbeddedCert(certDer, readTlv(certDer, 0)))
+  const start = embedded.find((cert) => cert.serialHex === serialHex)
+  if (!start) throw new ParseError('chain-parse', 'signer certificate not found')
+
+  const bySubject = new Map<string, Array<EmbeddedCert>>()
+  for (const cert of [...embedded, ...extras]) {
+    const sameSubject = bySubject.get(cert.subjectKey) ?? []
+    sameSubject.push(cert)
+    bySubject.set(cert.subjectKey, sameSubject)
+  }
+  // Walk signer → root. A self-signed certificate (issuer DER === subject
+  // DER) terminates the chain; anything else must resolve to a known issuer
+  // certificate or the chain is broken (fail-safe: throw, never guess).
+  const chain: Array<EmbeddedCert> = [start]
+  const seen = new Set<EmbeddedCert>([start])
+  let current = start
+  while (current.issuerKey !== current.subjectKey) {
+    const next = bySubject.get(current.issuerKey)?.find((cert) => !seen.has(cert))
+    if (!next) {
+      throw new ParseError(
+        'chain-parse',
+        'issuer certificate missing: chain does not reach a self-signed root',
+      )
+    }
+    chain.push(next)
+    seen.add(next)
+    current = next
+  }
+  return chain.map((cert) => cert.derBytes)
+}
+
+/** One embedded certificate reduced to the fields chain building compares. */
+interface EmbeddedCert {
+  derBytes: Uint8Array
+  serialHex: string
+  /** Hex of the exact issuer Name TLV bytes (byte-exact DN comparison). */
+  issuerKey: string
+  /** Hex of the exact subject Name TLV bytes. */
+  subjectKey: string
+}
+
+/**
+ * Certificate ::= SEQUENCE { tbsCertificate, signatureAlgorithm,
+ * signatureValue }; tbsCertificate ::= SEQUENCE { version [0] OPTIONAL,
+ * serialNumber, signature, issuer, validity, subject, ... }.
+ */
+function toEmbeddedCert(der: Uint8Array, certTlv: DerTlv): EmbeddedCert {
+  expectTag(certTlv, TAG_SEQUENCE, 'chain-parse', 'certificate structure unexpected')
+  const tbs = child(der, certTlv, 0)
+  expectTag(tbs, TAG_SEQUENCE, 'chain-parse', 'certificate structure unexpected')
+  const fields = children(der, tbs)
+  let index = 0
+  if (fields[0]?.tag === TAG_CONTEXT_0) index += 1 // [0] EXPLICIT version
+  const serial = fields[index]
+  const issuer = fields[index + 2]
+  const validity = fields[index + 3]
+  const subject = fields[index + 4]
+  if (!serial || !issuer || !validity || !subject) {
+    throw new ParseError('chain-parse', 'certificate structure unexpected')
+  }
+  expectTag(serial, TAG_INTEGER, 'chain-parse', 'certificate structure unexpected')
+  return {
+    derBytes: Buffer.from(der.subarray(certTlv.rawStart, certTlv.rawEnd)),
+    serialHex: Buffer.from(contentBytes(der, serial)).toString('hex'),
+    issuerKey: Buffer.from(der.subarray(issuer.rawStart, issuer.rawEnd)).toString('hex'),
+    subjectKey: Buffer.from(der.subarray(subject.rawStart, subject.rawEnd)).toString('hex'),
+  }
+}
+
+/**
  * Cryptographic core for one scanned signature. Step order is the evidence:
  * coverage → CMS parse → digest algorithm → key algorithm → content digest →
  * messageDigest attribute comparison → RSA verify. Parse/structure failures
@@ -202,55 +370,7 @@ export function verifySignature(bytes: Uint8Array, sig: ScannedSignature): Signa
 
   try {
     const der = Buffer.from(sig.contentsHex, 'hex')
-    // ContentInfo ::= SEQUENCE { contentType OID, content [0] EXPLICIT }
-    const root = readTlv(der, 0)
-    expectTag(root, TAG_SEQUENCE, 'cms-parse', 'container is not parseable as PKCS#7 SignedData')
-    const contentInfo = children(der, root)
-    const oidTlv = contentInfo[0]
-    const contentTlv = contentInfo[1]
-    if (!oidTlv || !contentTlv || contentInfo.length !== 2) {
-      throw new ParseError('cms-parse', 'ContentInfo structure unexpected')
-    }
-    if (decodeOid(der, oidTlv) !== OID_SIGNED_DATA) {
-      throw new ParseError('cms-parse', 'container is not SignedData')
-    }
-    expectTag(contentTlv, TAG_CONTEXT_0, 'cms-parse', 'SignedData wrapper unexpected')
-    const wrapper = readTlv(der, contentTlv.contentStart)
-    expectTag(wrapper, TAG_SEQUENCE, 'cms-parse', 'SignedData structure unexpected')
-
-    // SignedData ::= SEQUENCE { version, digestAlgorithms SET, contentInfo,
-    // certificates [0] IMPLICIT OPTIONAL, crls [1] OPTIONAL, signerInfos SET }
-    let innerContentInfo: DerTlv | null = null
-    let certificates: DerTlv | null = null
-    let signerInfos: DerTlv | null = null
-    for (const part of children(der, wrapper)) {
-      if (part.tag === TAG_INTEGER && innerContentInfo === null) {
-        // version
-        continue
-      }
-      if (part.tag === TAG_SEQUENCE && innerContentInfo === null) {
-        // inner detached contentInfo
-        innerContentInfo = part
-        continue
-      }
-      if (part.tag === TAG_SET) {
-        // digestAlgorithms precedes the inner contentInfo; signerInfos follows it
-        if (innerContentInfo === null) continue
-        if (signerInfos !== null)
-          throw new ParseError('cms-parse', 'SignedData structure unexpected')
-        signerInfos = part
-        continue
-      }
-      if (part.tag === TAG_CONTEXT_0 && innerContentInfo !== null) {
-        certificates = part
-        continue
-      }
-      if (part.tag === TAG_CONTEXT_1 && innerContentInfo !== null) {
-        // CRLs are out of scope at M0-D (no revocation claims)
-        continue
-      }
-      throw new ParseError('cms-parse', 'SignedData structure unexpected')
-    }
+    const { certificates, signerInfos } = parseSignedDataEnvelope(der)
     const signerTlv = signerInfos === null ? undefined : children(der, signerInfos)[0]
     if (!signerTlv) throw new ParseError('cms-parse', 'no signerInfos')
 
