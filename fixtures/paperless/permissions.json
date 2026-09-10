@@ -1,0 +1,206 @@
+{
+  "journey": "permissions",
+  "capturedAt": "2026-09-09T02:06:58.658Z",
+  "upstream": {
+    "service": "paperless-ngx",
+    "imageDigest": "sha256:aa810a36942c63d4ee70d00eda7236cd3d6acfb7eb3f7987fb568ed14df8817a"
+  },
+  "steps": [
+    {
+      "name": "create-users",
+      "request": {
+        "method": "POST",
+        "path": "/api/users/",
+        "headers": {},
+        "body": {
+          "username": "fixture-allowed|fixture-denied",
+          "password": "<redacted>",
+          "is_superuser": false,
+          "user_permissions": "['view_document'] | []"
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "allow": "GET, POST, HEAD, OPTIONS",
+          "content-language": "en-us",
+          "content-length": "380",
+          "content-type": "application/json",
+          "cross-origin-opener-policy": "same-origin",
+          "date": "Wed, 09 Sep 2026 02:06:57 GMT",
+          "referrer-policy": "same-origin",
+          "server": "granian",
+          "vary": "Accept, Accept-Language, origin, Cookie",
+          "x-api-version": "10",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-version": "3.1.3"
+        },
+        "body": {
+          "id": 7,
+          "username": "fixture-allowed",
+          "email": "",
+          "password": "<redacted>",
+          "first_name": "",
+          "last_name": "",
+          "date_joined": "2026-09-09T02:06:57.769621Z",
+          "is_staff": false,
+          "is_active": true,
+          "is_superuser": false,
+          "groups": [],
+          "user_permissions": ["view_document"],
+          "inherited_permissions": [],
+          "is_mfa_enabled": false
+        }
+      },
+      "notes": "denied creation status=201; allowed user carries model-level view_document (required alongside the object share; observed 403 without it)"
+    },
+    {
+      "name": "share-with-allowed-only",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/documents/4/",
+        "headers": {},
+        "body": {
+          "set_permissions": {
+            "view": {
+              "users": ["<allowed user id>"],
+              "groups": []
+            },
+            "change": {
+              "users": [],
+              "groups": []
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "allow": "GET, PUT, PATCH, DELETE, HEAD, OPTIONS",
+          "content-encoding": "gzip",
+          "content-language": "en-us",
+          "content-length": "492",
+          "content-type": "application/json",
+          "cross-origin-opener-policy": "same-origin",
+          "date": "Wed, 09 Sep 2026 02:06:58 GMT",
+          "referrer-policy": "same-origin",
+          "server": "granian",
+          "vary": "Accept, Accept-Language, origin, Cookie, Accept-Encoding",
+          "x-api-version": "10",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-version": "3.1.3"
+        },
+        "body": {
+          "id": 4,
+          "correspondent": null,
+          "document_type": null,
+          "storage_path": null,
+          "title": "sig-001",
+          "content": "Fixture SIG-001 (unsigned)\nSynthetic Doculite fixture — no real person signed this.",
+          "tags": [],
+          "created": "2026-09-09",
+          "created_date": "2026-09-09",
+          "modified": "2026-09-09T02:06:58.480696Z",
+          "added": "2026-09-09T02:06:56.366972Z",
+          "deleted_at": null,
+          "archive_serial_number": null,
+          "original_file_name": "sig-001.pdf",
+          "archived_file_name": null,
+          "duplicate_documents": [],
+          "owner": 2,
+          "permissions": {
+            "view": {
+              "users": [7],
+              "groups": []
+            },
+            "change": {
+              "users": [],
+              "groups": []
+            }
+          },
+          "notes": [],
+          "custom_fields": [
+            {
+              "value": "captured by m0c",
+              "field": 3
+            }
+          ],
+          "page_count": 1,
+          "mime_type": "application/pdf",
+          "root_document": null,
+          "versions": [
+            {
+              "id": 4,
+              "added": "2026-09-09T02:06:56.366972Z",
+              "version_label": null,
+              "checksum": "04efb22bb7709c1cafb5921b56084cade0343f03e411241f98ec5275165775f2",
+              "is_root": true
+            }
+          ]
+        }
+      },
+      "notes": "grant verified in-session: response permissions.view.users=[7] (expected [7])"
+    },
+    {
+      "name": "allowed-can-retrieve",
+      "request": {
+        "method": "GET",
+        "path": "/api/documents/4/",
+        "headers": {}
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "allow": "GET, PUT, PATCH, DELETE, HEAD, OPTIONS",
+          "content-encoding": "gzip",
+          "content-language": "en-us",
+          "content-length": "487",
+          "content-type": "application/json",
+          "cross-origin-opener-policy": "same-origin",
+          "date": "Wed, 09 Sep 2026 02:06:58 GMT",
+          "referrer-policy": "same-origin",
+          "server": "granian",
+          "vary": "Accept, Accept-Language, origin, Cookie, Accept-Encoding",
+          "x-api-version": "10",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-version": "3.1.3"
+        },
+        "body": "<document detail omitted — authorized path>"
+      },
+      "notes": "observed status=200; assert at replay: allowed user retrieves (200), denied user receives >=400 with no metadata leakage"
+    },
+    {
+      "name": "denied-cannot-retrieve",
+      "request": {
+        "method": "GET",
+        "path": "/api/documents/4/",
+        "headers": {}
+      },
+      "response": {
+        "status": 403,
+        "headers": {
+          "allow": "GET, PUT, PATCH, DELETE, HEAD, OPTIONS",
+          "content-language": "en-us",
+          "content-length": "63",
+          "content-type": "application/json",
+          "cross-origin-opener-policy": "same-origin",
+          "date": "Wed, 09 Sep 2026 02:06:58 GMT",
+          "referrer-policy": "same-origin",
+          "server": "granian",
+          "vary": "Accept, Accept-Language, origin, Cookie",
+          "x-api-version": "10",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-version": "3.1.3"
+        },
+        "body": {
+          "detail": "You do not have permission to perform this action."
+        }
+      },
+      "notes": "observed status=403; assert at replay: allowed user retrieves (200), denied user receives >=400 with no metadata leakage"
+    }
+  ]
+}

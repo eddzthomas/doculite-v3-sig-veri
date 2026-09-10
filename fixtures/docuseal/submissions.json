@@ -1,0 +1,327 @@
+{
+  "journey": "submissions",
+  "capturedAt": "2026-09-09T03:53:13.913Z",
+  "upstream": {
+    "service": "docuseal",
+    "imageDigest": "sha256:a8f063f916e39fe326af62111f875200c171ea1f5c6902f3b39f634b9549a3ef"
+  },
+  "steps": [
+    {
+      "name": "create-ui-session",
+      "request": {
+        "method": "POST",
+        "path": "/sign_in",
+        "headers": {},
+        "body": {
+          "user": {
+            "email": "<redacted:admin-email>",
+            "password": "<redacted>"
+          }
+        }
+      },
+      "response": {
+        "status": 303,
+        "headers": {},
+        "body": {
+          "note": "session cookie established; cookie value omitted"
+        }
+      },
+      "notes": "UI session required on pinned 3.2.4: template and webhook configuration are UI-only (no API routes); login email resolved via GET /api/user and redacted here (the write-guard refuses any .env value substring, and the admin name is a .env value)"
+    },
+    {
+      "name": "create-template-via-ui",
+      "request": {
+        "via": "browser-ui",
+        "action": "POST /templates_upload (file dropzone #file_dropzone_input) then field placement in /templates/:id/edit builder",
+        "headers": {},
+        "body": {
+          "filename": "sig-007-base.pdf",
+          "fieldsPlaced": [
+            {
+              "type": "text",
+              "area": "x=25%, y=15% of page 1"
+            },
+            {
+              "type": "signature",
+              "area": "x=25%, y=30% of page 1"
+            }
+          ],
+          "role": "First Party"
+        }
+      },
+      "response": {
+        "status": 302,
+        "headers": {},
+        "body": {
+          "status": 302,
+          "redirectedTo": "/templates/10/edit"
+        }
+      },
+      "notes": "template creation is UI-only on pinned 3.2.4: POST /api/templates -> 404 and POST /api/submissions/init -> 422 {\"error\":\"Template not found\"} observed in-session (also verified against pinned routes.rb: api/templates has no create action); builder auto-persists placements via PUT /templates/:id (200 observed); template id redacted from URL in notes is resolved at runtime"
+    },
+    {
+      "name": "rename-template",
+      "request": {
+        "method": "PUT",
+        "path": "/api/templates/10",
+        "headers": {},
+        "body": {
+          "name": "M0C Capture Template"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-encoding": "gzip",
+          "content-type": "application/json; charset=utf-8",
+          "etag": "W/\"923d717d470f3d6234757f648ec36aab\"",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "transfer-encoding": "chunked",
+          "vary": "Accept-Encoding",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-permitted-cross-domain-policies": "none",
+          "x-request-id": "6688179d-ec75-4d56-9148-ff6b614467a4",
+          "x-runtime": "0.019965",
+          "x-xss-protection": "0"
+        },
+        "body": {
+          "id": 10,
+          "updated_at": "2026-09-09T03:53:00.833Z"
+        }
+      },
+      "notes": "api/templates exposes update/show/index/destroy only on this pinned build"
+    },
+    {
+      "name": "verify-template-fields",
+      "request": {
+        "method": "GET",
+        "path": "/api/templates/10",
+        "headers": {}
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-encoding": "gzip",
+          "content-type": "application/json; charset=utf-8",
+          "etag": "W/\"59c1f263d6cc1a7c4943817b3c968f21\"",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "transfer-encoding": "chunked",
+          "vary": "Accept-Encoding",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-permitted-cross-domain-policies": "none",
+          "x-request-id": "89e3911b-2dc8-4b64-9fe8-ad147c2a51a5",
+          "x-runtime": "0.019586",
+          "x-xss-protection": "0"
+        },
+        "body": {
+          "id": 10,
+          "name": "M0C Capture Template",
+          "slug": "ndmdRUqnJwXq9x",
+          "schema": [
+            {
+              "attachment_uuid": "4db30077-432c-41c8-8df2-56a824197d60",
+              "name": "sig-007-base"
+            }
+          ],
+          "submitters": [
+            {
+              "name": "First Party",
+              "uuid": "984b9aac-077d-4c4a-8239-0bccb7825018"
+            }
+          ],
+          "fields": [
+            {
+              "uuid": "dbbd3222-f5c4-48a9-b8f5-ea735d3a6a9b",
+              "submitter_uuid": "984b9aac-077d-4c4a-8239-0bccb7825018",
+              "name": "",
+              "type": "text",
+              "required": true,
+              "preferences": {},
+              "areas": [
+                {
+                  "x": 0.15,
+                  "y": 0.1357368736245204,
+                  "w": 0.2,
+                  "h": 0.02857142857142857,
+                  "attachment_uuid": "4db30077-432c-41c8-8df2-56a824197d60",
+                  "page": 0
+                }
+              ]
+            },
+            {
+              "uuid": "7f95d1b3-b756-4aa4-b57c-2f72fcb3209a",
+              "submitter_uuid": "984b9aac-077d-4c4a-8239-0bccb7825018",
+              "name": "",
+              "type": "signature",
+              "required": true,
+              "areas": [
+                {
+                  "x": 0.15,
+                  "y": 0.26470381035862195,
+                  "w": 0.2,
+                  "h": 0.07068273092369479,
+                  "attachment_uuid": "4db30077-432c-41c8-8df2-56a824197d60",
+                  "page": 0
+                }
+              ]
+            }
+          ],
+          "variables_schema": {},
+          "preferences": {},
+          "source": "native",
+          "created_at": "2026-09-09T03:52:55.748Z",
+          "updated_at": "2026-09-09T03:53:00.833Z",
+          "archived_at": null,
+          "author_id": 1,
+          "external_id": null,
+          "folder_id": 1,
+          "shared_link": false,
+          "application_key": null,
+          "folder_name": "Default",
+          "author": {
+            "id": 1,
+            "email": "<redacted:admin-email>",
+            "first_name": "Capture",
+            "last_name": "Admin"
+          },
+          "documents": [
+            {
+              "id": 34,
+              "uuid": "4db30077-432c-41c8-8df2-56a824197d60",
+              "url": "<redacted:capability-url>",
+              "preview_image_url": "<redacted:capability-url>",
+              "filename": "sig-007-base.pdf"
+            }
+          ]
+        }
+      },
+      "notes": "fields must exist before POST /api/submissions (pinned build rejects fieldless templates with 422 \"Template does not contain fields\"); capability URLs scrubbed"
+    },
+    {
+      "name": "create-submission",
+      "request": {
+        "method": "POST",
+        "path": "/api/submissions",
+        "headers": {},
+        "body": {
+          "template_id": 10,
+          "send_email": false,
+          "submitters": [
+            {
+              "role": "First Party",
+              "name": "Capture Fixture Signer",
+              "email": "signer@example.com"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-encoding": "gzip",
+          "content-type": "application/json; charset=utf-8",
+          "etag": "W/\"a79954aa2a9d563aaa387ebb2ed77428\"",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "transfer-encoding": "chunked",
+          "vary": "Accept-Encoding",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-permitted-cross-domain-policies": "none",
+          "x-request-id": "0804e107-120d-40d5-ab43-0a7ff8a2eb88",
+          "x-runtime": "0.057629",
+          "x-xss-protection": "0"
+        },
+        "body": [
+          {
+            "id": 6,
+            "slug": "gKUa4oWziVbYkf",
+            "uuid": "984b9aac-077d-4c4a-8239-0bccb7825018",
+            "name": "Capture Fixture Signer",
+            "email": "signer@example.com",
+            "phone": null,
+            "completed_at": null,
+            "declined_at": null,
+            "external_id": null,
+            "submission_id": 6,
+            "metadata": {},
+            "opened_at": null,
+            "sent_at": null,
+            "created_at": "2026-09-09T03:53:06.873Z",
+            "updated_at": "2026-09-09T03:53:06.873Z",
+            "status": "awaiting",
+            "application_key": null,
+            "values": [],
+            "preferences": {
+              "send_email": false,
+              "send_sms": false
+            },
+            "role": "First Party",
+            "embed_src": "<redacted:capability-url>"
+          }
+        ]
+      },
+      "notes": "signer link path recorded as /s/gKUa4oWziVbYkf (full URL scrubbed); response is a bare submitter array on pinned 3.2.4 â€” slug at [0].slug, submission id at [0].submission_id; submitter key is role (singular)"
+    },
+    {
+      "name": "complete-signing-via-public-page",
+      "request": {
+        "via": "browser-ui",
+        "action": "GET /s/gKUa4oWziVbYkf then typed-signature flow (text field -> NEXT -> SIGN NOW -> Type tab -> SIGN AND COMPLETE)",
+        "headers": {},
+        "body": {
+          "signer": "Capture Fixture Signer",
+          "signatureMode": "type"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {},
+        "body": {
+          "pageState": "Document has been signed!"
+        }
+      },
+      "notes": "public hosted signing page driven with Playwright; pinned 3.x uses a field-by-field wizard: text field fill then #submit_form_button (NEXT), signature dialog (button \"SIGN NOW\" reopens it if minimized), TYPE tab, then \"SIGN AND COMPLETE\"; no generic Complete button exists on this build"
+    },
+    {
+      "name": "retrieve-completed-pdf",
+      "request": {
+        "method": "GET",
+        "path": "/api/submissions/6/documents",
+        "headers": {}
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-encoding": "gzip",
+          "content-type": "application/json; charset=utf-8",
+          "etag": "W/\"0eea0ae9e5e0ca79bc215eb22eac90ee\"",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "transfer-encoding": "chunked",
+          "vary": "Accept-Encoding",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-permitted-cross-domain-policies": "none",
+          "x-request-id": "23475215-3fc7-46ec-ab41-257ca411206e",
+          "x-runtime": "0.018710",
+          "x-xss-protection": "0"
+        },
+        "body": {
+          "id": 6,
+          "documents": [
+            {
+              "name": "sig-007-base",
+              "url": "<redacted:capability-url>"
+            }
+          ]
+        }
+      },
+      "notes": "drift vs brief: /documents returns JSON {id, documents:[{name, url}]} â€” the bytes come from the signed per-document URL (fetched in-session, auth-free signed link, URL scrubbed); sha256(bytes)=931948a6acec8086e1ad486b9b765116e4efe256ee4c41297fa071473ee84d5a; bytes committed as fixtures/signatures/sig-007.pdf"
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "generatedAt": "2026-09-08T20:33:33.077Z",
+  "generatorVersion": "1.0.0",
+  "items": [
+    {
+      "id": "SIG-001",
+      "file": "sig-001.pdf",
+      "sha256": "04efb22bb7709c1cafb5921b56084cade0343f03e411241f98ec5275165775f2",
+      "condition": "Unsigned PDF",
+      "expectedOutcome": "unsigned",
+      "construction": "pdf-lib only",
+      "certs": [],
+      "capturedFrom": "generator"
+    },
+    {
+      "id": "SIG-002",
+      "file": "sig-002.pdf",
+      "sha256": "72fe4e53e5eeae01eed24b2e1895c1255dbd240a3c0fc08e89467d58d3ad9336",
+      "condition": "Valid signature, root-A in candidate policy",
+      "expectedOutcome": "valid_trusted",
+      "construction": "leaf(A) over pdf-lib document",
+      "certs": ["root-a"],
+      "capturedFrom": "generator"
+    },
+    {
+      "id": "SIG-003",
+      "file": "sig-003.pdf",
+      "sha256": "93d24f5df81c39b4eea7f811f4f88276e67ee92d431e0c8231bb2f0b918e551a",
+      "condition": "Valid signature, root-B not in policy",
+      "expectedOutcome": "valid_untrusted",
+      "construction": "leaf(B) over pdf-lib document",
+      "certs": ["root-b"],
+      "capturedFrom": "generator"
+    },
+    {
+      "id": "SIG-004",
+      "file": "sig-004.pdf",
+      "sha256": "44588802af0776c2393d5b1af2ddafe91aa3dec8484124995decd8b163f023a8",
+      "condition": "Content altered after signing",
+      "expectedOutcome": "invalid",
+      "construction": "single-byte mutation of sig-002 inside signed range",
+      "certs": [],
+      "capturedFrom": "generator"
+    },
+    {
+      "id": "SIG-005",
+      "file": "sig-005.pdf",
+      "sha256": "d1e8035f27a71523080b324e66f381c5852e9dac31aac2258af385a74f681070",
+      "condition": "Malformed signature container",
+      "expectedOutcome": "error",
+      "construction": "PKCS#7 hex corruption of sig-002",
+      "certs": [],
+      "capturedFrom": "generator"
+    },
+    {
+      "id": "SIG-006",
+      "file": "sig-006.pdf",
+      "sha256": "40e4b2d062f2b4774a6a16bab6acffa9d14ba2ee8d13ed30fb93183f33b608d4",
+      "condition": "Multiple signatures with mixed trust",
+      "expectedOutcome": "valid_untrusted",
+      "construction": "leaf(A) then leaf(B) incremental signatures",
+      "certs": ["root-a", "root-b"],
+      "capturedFrom": "generator"
+    },
+    {
+      "id": "SIG-007",
+      "file": "sig-007.pdf",
+      "sha256": "931948a6acec8086e1ad486b9b765116e4efe256ee4c41297fa071473ee84d5a",
+      "condition": "Completed DocuSeal document",
+      "expectedOutcome": "valid_untrusted",
+      "construction": "live-captured from pinned docuseal during capture session",
+      "certs": [],
+      "capturedFrom": "docuseal",
+      "capturedAt": "2026-09-09T03:53:29.065Z"
+    },
+    {
+      "id": "SIG-008",
+      "file": "sig-008.pdf",
+      "sha256": "c4be9caccfcc3542cdabce537bc5f0b3b844bd3fe0de92c581f0910602274e90",
+      "condition": "Valid external signature",
+      "expectedOutcome": "valid_untrusted",
+      "construction": "leaf(B) over distinct document",
+      "certs": ["root-b"],
+      "capturedFrom": "generator"
+    },
+    {
+      "id": "SIG-009",
+      "file": null,
+      "sha256": null,
+      "condition": "Verifier transport/service failure",
+      "expectedOutcome": "error",
+      "construction": "scenario fixture: recorded verifier-unreachable exchanges",
+      "scenario": "fixtures/docuseal/verifier-error.json",
+      "capturedFrom": "generator"
+    }
+  ]
+}
