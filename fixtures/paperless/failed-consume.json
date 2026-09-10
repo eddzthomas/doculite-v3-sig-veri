@@ -1,0 +1,102 @@
+{
+  "journey": "failed-consume",
+  "capturedAt": "2026-09-10T02:30:03.996Z",
+  "upstream": {
+    "service": "paperless-ngx",
+    "imageDigest": "sha256:aa810a36942c63d4ee70d00eda7236cd3d6acfb7eb3f7987fb568ed14df8817a"
+  },
+  "steps": [
+    {
+      "name": "post-corrupt-document",
+      "request": {
+        "method": "POST",
+        "path": "/api/documents/post_document/",
+        "headers": {},
+        "body": "multipart: corrupt-fixture.pdf bytes (%PDF- header + deterministic garbage body)"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "allow": "POST, OPTIONS",
+          "content-language": "en-us",
+          "content-length": "38",
+          "content-type": "application/json",
+          "cross-origin-opener-policy": "same-origin",
+          "date": "Thu, 10 Sep 2026 02:30:01 GMT",
+          "referrer-policy": "same-origin",
+          "server": "granian",
+          "vary": "Accept, Accept-Language, origin, Cookie",
+          "x-api-version": "10",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-version": "3.1.3"
+        },
+        "body": "9ea86366-24a3-4a27-9964-34fb8198afeb"
+      },
+      "notes": "corrupt upload probed for the failed-processing shape; recorded behavior is what the pinned build actually does"
+    },
+    {
+      "name": "task-terminal-failure",
+      "request": {
+        "method": "GET",
+        "path": "/api/tasks/",
+        "headers": {}
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "allow": "GET, HEAD, OPTIONS",
+          "content-encoding": "gzip",
+          "content-language": "en-us",
+          "content-length": "2610",
+          "content-type": "application/json",
+          "cross-origin-opener-policy": "same-origin",
+          "date": "Thu, 10 Sep 2026 02:30:03 GMT",
+          "referrer-policy": "same-origin",
+          "server": "granian",
+          "vary": "Accept, Accept-Language, origin, Cookie, Accept-Encoding",
+          "x-api-version": "10",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-version": "3.1.3"
+        },
+        "body": [
+          {
+            "id": 26,
+            "task_id": "9ea86366-24a3-4a27-9964-34fb8198afeb",
+            "task_type": "consume_file",
+            "task_type_display": "Consume File",
+            "trigger_source": "api_upload",
+            "trigger_source_display": "API Upload",
+            "status": "failure",
+            "status_display": "Failure",
+            "date_created": "2026-09-10T02:30:01.865801Z",
+            "date_started": "2026-09-10T02:30:01.893781Z",
+            "date_done": "2026-09-10T02:30:02.786218Z",
+            "duration_seconds": 0.892437,
+            "wait_time_seconds": 0.02798,
+            "input_data": {
+              "filename": "corrupt-fixture.pdf",
+              "mime_type": "application/pdf",
+              "overrides": {
+                "filename": "corrupt-fixture.pdf",
+                "owner_id": 2,
+                "remote_ocr": false,
+                "skip_asn_if_exists": false
+              }
+            },
+            "result_data": {
+              "traceback": "  File \"/usr/local/lib/python3.14/site-packages/celery/app/trace.py\", line 585, in trace_task\n    R = retval = fun(*args, **kwargs)\n                 ~~~^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.14/site-packages/celery/app/trace.py\", line 858, in __protected_call__\n    return self.run(*args, **kwargs)\n           ~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.14/site-packages/asgiref/sync.py\", line 361, in main_wrap\n    raise exc_info[1]\n  File \"/usr/src/paperless/src/documents/tasks.py\", line 243, in consume_file\n    msg = plugin.run()\n  File \"/usr/src/paperless/src/documents/consumer.py\", line 566, in run\n    self._fail(\n    ~~~~~~~~~~^\n        str(e),\n        ^^^^^^^\n    ...<2 lines>...\n        exception=e,\n        ^^^^^^^^^^^^\n    )\n    ^\n  File \"/usr/src/paperless/src/documents/consumer.py\", line 236, in _fail\n    raise ConsumerError(f\"{self.filename}: {log_message or message}\") from exception\n",
+              "error_type": "ConsumerError",
+              "error_message": "corrupt-fixture.pdf: Error occurred while consuming document corrupt-fixture.pdf: InputFileError: "
+            },
+            "related_document_ids": [],
+            "acknowledged": false,
+            "owner": 2
+          }
+        ]
+      },
+      "notes": "terminal state failure; states seen: started,failure; polling scoped to consume task 9ea86366-24a3-4a27-9964-34fb8198afeb; failure/error detail recorded in the task body exactly as received; product maps a failed consume task to the normalized outcome `error` — never a validity status"
+    }
+  ]
+}

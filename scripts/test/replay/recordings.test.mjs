@@ -21,6 +21,11 @@
 // - DocuSeal verifier-error journey has TWO failure shapes: transport failure
 //   (status 0, ECONNREFUSED) and upstream 422 malformed input. Both must map
 //   to `error` and never to a validity status.
+// - Paperless failed-consume journey: a corrupt upload is accepted with the
+//   same bare task id as a valid one, and the consume task reaches a terminal
+//   lowercase `failure` with typed error info (result_data.error_type /
+//   error_message / traceback) and an empty related_document_ids array. The
+//   product maps it to `error`, never a validity status.
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -33,6 +38,7 @@ const load = (service, journey) =>
 const PAPERLESS_JOURNEYS = [
   'auth',
   'upload-polling',
+  'failed-consume',
   'search-list',
   'preview',
   'metadata',
@@ -92,6 +98,36 @@ describe('paperless recordings', () => {
     expect(post.response.body).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
     )
+  })
+
+  it('failed-consume: corrupt upload reaches a terminal FAILURE with error info', () => {
+    const j = load('paperless', 'failed-consume')
+    const post = j.steps.find((s) => s.name === 'post-corrupt-document')
+    expect(post.response.status).toBe(200)
+    // Same async-consumption contract as the success journey: the bare JSON
+    // string task id is returned even for bytes that cannot survive
+    // consumption — validity is decided by the consume task, not the upload.
+    expect(typeof post.response.body).toBe('string')
+    expect(post.response.body).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    )
+    const terminal = j.steps.find((s) => s.name === 'task-terminal-failure')
+    expect(terminal.response.status).toBe(200)
+    const task = terminal.response.body[0]
+    // contract note: the failed-processing vocabulary is lowercase `failure`
+    // (same lowercase scheme as the success transitions). The product maps a
+    // failed consume task to the normalized outcome `error` — never a validity
+    // status.
+    expect(task.status).toBe('failure')
+    expect(task.task_type).toBe('consume_file')
+    // Error info is present and typed: result_data carries the traceback plus
+    // error_type/error_message.
+    expect(task.result_data.error_type).toBeTruthy()
+    expect(task.result_data.error_message).toBeTruthy()
+    expect(typeof task.result_data.traceback).toBe('string')
+    // A failed consume task links to no document.
+    expect(task.related_document_ids).toEqual([])
+    expect(terminal.notes).toMatch(/never a validity status/)
   })
 
   it('search-list: pagination envelope shape', () => {
