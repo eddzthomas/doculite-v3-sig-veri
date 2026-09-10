@@ -1,12 +1,21 @@
-export { ADAPTER_VERSION, deriveStatus } from './result'
+export { ADAPTER_VERSION, type Dimensions, deriveStatus } from './result.ts'
 export type {
   CertValidityWindow,
   CoveredRange,
   EvidenceRecord,
   Integrity,
+  IntegrityEvaluation,
+  NotEvaluated,
+  PerSignatureIntegritySummary,
   PerSignatureSummary,
   Provenance,
+  ProvenanceEvaluation,
+  ScannedSignature,
+  ScannedSignatureOrMalformed,
+  SignatureCryptoFacts,
+  SignatureVerification,
   Trust,
+  TrustEvaluation,
   VerificationResult,
   VerificationStatus,
-} from './types'
+} from './types.ts'
