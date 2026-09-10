@@ -33,7 +33,7 @@
         "body": {
           "id": 6,
           "name": null,
-          "slug": "Fnso9HCY3Wg33J",
+          "slug": "<slug>",
           "source": "api",
           "submitters_order": "preserved",
           "expire_at": null,
@@ -43,7 +43,7 @@
           "submitters": [
             {
               "id": 6,
-              "slug": "gKUa4oWziVbYkf",
+              "slug": "<slug>",
               "uuid": "984b9aac-077d-4c4a-8239-0bccb7825018",
               "name": "Capture Fixture Signer",
               "email": "signer@example.com",
@@ -120,7 +120,7 @@
         "body": {
           "id": 6,
           "name": null,
-          "slug": "Fnso9HCY3Wg33J",
+          "slug": "<slug>",
           "source": "api",
           "submitters_order": "preserved",
           "expire_at": null,
@@ -130,7 +130,7 @@
           "submitters": [
             {
               "id": 6,
-              "slug": "gKUa4oWziVbYkf",
+              "slug": "<slug>",
               "uuid": "984b9aac-077d-4c4a-8239-0bccb7825018",
               "name": "Capture Fixture Signer",
               "email": "signer@example.com",

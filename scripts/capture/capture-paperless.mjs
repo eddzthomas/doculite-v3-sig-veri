@@ -6,7 +6,8 @@
 // log can prove original-bytes fidelity; the bytes themselves are never
 // committed to the recording.
 import { createHash } from 'node:crypto'
-import { readFile } from 'node:fs/promises'
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { JourneyRecorder } from './lib/recorder.mjs'
 
@@ -37,6 +38,31 @@ if (!ADMIN.username || !ADMIN.password)
 const FIXTURE_PDF = join(import.meta.dirname, '..', '..', 'fixtures', 'signatures', 'sig-001.pdf')
 // Set from the sig-001 manifest sha256 by the session (original-bytes anchor).
 const FIXTURE_SHA = process.env.FIXTURE_SHA
+// Fail fast: the download journey's original-bytes verification is only
+// meaningful when the uploaded bytes are provably the fixture bytes. A missing
+// or mismatched FIXTURE_SHA would silently weaken that verification.
+const SIG_MANIFEST_PATH = join(
+  import.meta.dirname,
+  '..',
+  '..',
+  'fixtures',
+  'signatures',
+  'signatures-manifest.json',
+)
+if (!FIXTURE_SHA)
+  throw new Error(
+    'FIXTURE_SHA is not set — export the sig-001 manifest sha256 (fixtures/signatures/signatures-manifest.json) before capturing',
+  )
+{
+  const sigManifest = JSON.parse(await readFile(SIG_MANIFEST_PATH, 'utf8'))
+  const sig001 = sigManifest.items.find((it) => it.id === 'SIG-001')
+  if (!sig001?.sha256)
+    throw new Error('SIG-001 entry missing from fixtures/signatures/signatures-manifest.json')
+  if (sig001.sha256 !== FIXTURE_SHA)
+    throw new Error(
+      `FIXTURE_SHA (${FIXTURE_SHA}) does not match the manifest SIG-001 sha256 (${sig001.sha256}) — refusing to capture against the wrong bytes`,
+    )
+}
 
 const rec = (journey) =>
   new JourneyRecorder({ journeysDir: DIR, journey, service: 'paperless-ngx' })
@@ -92,6 +118,100 @@ async function call(method, path, { headers = {}, body, token, raw } = {}) {
     headers: Object.fromEntries(res.headers),
     body: responseBody,
   }
+}
+
+// ---- single-journey mode: failed-consume -----------------------------------
+// `node scripts/capture/capture-paperless.mjs --only=failed-consume` records
+// ONLY the failed-processing contract shape and exits — used to add a missing
+// spec deliverable without re-running the success journeys (which would create
+// duplicate upstream state). A deliberately corrupt PDF (valid %PDF- header,
+// deterministic garbage body) is uploaded, its consume task is polled scoped
+// by task id, and the terminal FAILURE state + error-message shape are
+// recorded. If upstream behaves differently than expected (synchronous
+// rejection, no failure state), the reality is recorded honestly.
+const ONLY = process.argv.find((a) => a.startsWith('--only='))?.split('=')[1] ?? null
+if (ONLY === 'failed-consume') {
+  const failed = rec('failed-consume')
+  // The auth journey records the token shape; this mode reuses the same
+  // throttled login without re-recording it.
+  const { token: FAILED_TOKEN } = await loginWithRetry(ADMIN.username, ADMIN.password)
+  const tmpDir = await mkdtemp(join(tmpdir(), 'm0c-corrupt-'))
+  const corruptPath = join(tmpDir, 'corrupt-fixture.pdf')
+  // Enough of a header to be accepted as a PDF upload, not enough to survive
+  // consumption (no objects, no xref). Body is deterministic, not random, so
+  // the recorded shape is reproducible.
+  const header = Buffer.from('%PDF-1.4\n', 'latin1')
+  const garbage = Buffer.alloc(4096)
+  for (let i = 0; i < garbage.length; i++) garbage[i] = (i * 31 + 7) % 251
+  const corruptBytes = Buffer.concat([header, garbage])
+  await writeFile(corruptPath, corruptBytes)
+  const badFd = new FormData()
+  badFd.append(
+    'document',
+    new Blob([corruptBytes], { type: 'application/pdf' }),
+    'corrupt-fixture.pdf',
+  )
+  const badUp = await call('POST', '/api/documents/post_document/', {
+    token: FAILED_TOKEN,
+    body: badFd,
+  })
+  failed.step({
+    name: 'post-corrupt-document',
+    request: {
+      method: 'POST',
+      path: '/api/documents/post_document/',
+      headers: {},
+      body: 'multipart: corrupt-fixture.pdf bytes (%PDF- header + deterministic garbage body)',
+    },
+    response: { status: badUp.status, headers: badUp.headers, body: badUp.body },
+    notes:
+      'corrupt upload probed for the failed-processing shape; recorded behavior is what the pinned build actually does',
+  })
+  if (badUp.status >= 400) {
+    failed.step({
+      name: 'post-corrupt-document-rejected',
+      request: { method: 'GET', path: '/api/tasks/', headers: {} },
+      response: { status: badUp.status, headers: badUp.headers, body: badUp.body },
+      notes:
+        'upstream rejected the corrupt upload synchronously (no consume task created); product maps a rejected upload to the normalized outcome `error` — never a validity status',
+    })
+    failed.write()
+    console.log(
+      `failed-consume capture complete — upload rejected synchronously with ${badUp.status}`,
+    )
+    process.exit(0)
+  }
+  const BAD_TASK_ID = typeof badUp.body === 'string' ? badUp.body : badUp.body?.task_id
+  if (typeof BAD_TASK_ID !== 'string' || !BAD_TASK_ID) {
+    throw new Error(
+      `post_document returned no consume-task id for the corrupt upload — raw body: ${JSON.stringify(badUp.body).slice(0, 300)}`,
+    )
+  }
+  const badSeen = new Set()
+  let badTerminal = null
+  for (let i = 0; i < 120; i++) {
+    const tasks = await call('GET', '/api/tasks/', { token: FAILED_TOKEN })
+    const mine = (Array.isArray(tasks.body) ? tasks.body : (tasks.body.results ?? [])).filter(
+      (t) => t.task_id === BAD_TASK_ID,
+    )
+    for (const t of mine) if (typeof t.status === 'string') badSeen.add(t.status)
+    badTerminal = mine.find((t) => t.status === 'success' || t.status === 'failure')
+    if (badTerminal) {
+      failed.step({
+        name: 'task-terminal-failure',
+        request: { method: 'GET', path: '/api/tasks/', headers: {} },
+        response: { status: tasks.status, headers: tasks.headers, body: mine },
+        notes: `terminal state ${badTerminal.status}; states seen: ${[...badSeen].join(',')}; polling scoped to consume task ${BAD_TASK_ID}; failure/error detail recorded in the task body exactly as received; product maps a failed consume task to the normalized outcome \`error\` — never a validity status`,
+      })
+      break
+    }
+    await new Promise((r) => setTimeout(r, 2000))
+  }
+  if (!badTerminal)
+    throw new Error('corrupt consume task never reached a terminal state within the polling bound')
+  failed.write()
+  console.log(`failed-consume capture complete — terminal status: ${badTerminal.status}`)
+  process.exit(0)
 }
 
 // ---- journey 1: auth -------------------------------------------------------

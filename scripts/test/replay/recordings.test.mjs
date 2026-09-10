@@ -21,6 +21,11 @@
 // - DocuSeal verifier-error journey has TWO failure shapes: transport failure
 //   (status 0, ECONNREFUSED) and upstream 422 malformed input. Both must map
 //   to `error` and never to a validity status.
+// - Paperless failed-consume journey: a corrupt upload is accepted with the
+//   same bare task id as a valid one, and the consume task reaches a terminal
+//   lowercase `failure` with typed error info (result_data.error_type /
+//   error_message / traceback) and an empty related_document_ids array. The
+//   product maps it to `error`, never a validity status.
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -33,6 +38,7 @@ const load = (service, journey) =>
 const PAPERLESS_JOURNEYS = [
   'auth',
   'upload-polling',
+  'failed-consume',
   'search-list',
   'preview',
   'metadata',
@@ -92,6 +98,36 @@ describe('paperless recordings', () => {
     expect(post.response.body).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
     )
+  })
+
+  it('failed-consume: corrupt upload reaches a terminal FAILURE with error info', () => {
+    const j = load('paperless', 'failed-consume')
+    const post = j.steps.find((s) => s.name === 'post-corrupt-document')
+    expect(post.response.status).toBe(200)
+    // Same async-consumption contract as the success journey: the bare JSON
+    // string task id is returned even for bytes that cannot survive
+    // consumption — validity is decided by the consume task, not the upload.
+    expect(typeof post.response.body).toBe('string')
+    expect(post.response.body).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    )
+    const terminal = j.steps.find((s) => s.name === 'task-terminal-failure')
+    expect(terminal.response.status).toBe(200)
+    const task = terminal.response.body[0]
+    // contract note: the failed-processing vocabulary is lowercase `failure`
+    // (same lowercase scheme as the success transitions). The product maps a
+    // failed consume task to the normalized outcome `error` — never a validity
+    // status.
+    expect(task.status).toBe('failure')
+    expect(task.task_type).toBe('consume_file')
+    // Error info is present and typed: result_data carries the traceback plus
+    // error_type/error_message.
+    expect(task.result_data.error_type).toBeTruthy()
+    expect(task.result_data.error_message).toBeTruthy()
+    expect(typeof task.result_data.traceback).toBe('string')
+    // A failed consume task links to no document.
+    expect(task.related_document_ids).toEqual([])
+    expect(terminal.notes).toMatch(/never a validity status/)
   })
 
   it('search-list: pagination envelope shape', () => {
@@ -176,16 +212,18 @@ describe('docuseal recordings', () => {
     expect(create.request.body.send_email).toBe(false)
     // contract note: pinned 3.2.4 returns a bare submitter array — slug at
     // [0].slug, submission id at [0].submission_id, role key singular. Ids and
-    // slugs are per-run values, so only shapes are asserted.
+    // slugs are per-run values, and the slug is a capability (possession of
+    // /s/<slug> grants signing access), so it is recorded as a shape-only
+    // placeholder.
     const created = create.response.body
     expect(Array.isArray(created)).toBe(true)
-    expect(created[0].slug).toMatch(/^[A-Za-z0-9]+$/)
+    expect(created[0].slug).toBe('<slug>')
     expect(Number.isInteger(created[0].submission_id)).toBe(true)
     expect(created[0].submission_id).toBeGreaterThan(0)
     expect(created[0]).toHaveProperty('role')
     expect(created[0]).not.toHaveProperty('roles')
-    // Public hosted signer page path is /s/<slug>.
-    expect(create.notes).toMatch(/\/s\/[A-Za-z0-9]+/)
+    // Public hosted signer page path is /s/<slug> (raw slug scrubbed).
+    expect(create.notes).toMatch(/\/s\/<slug>/)
   })
 
   it('submissions: capability URLs scrubbed, completion documents via signed URL', () => {
@@ -287,6 +325,17 @@ describe('redaction invariants (all recordings)', () => {
           expect(text).not.toContain(secret.value)
         }
       }
+    }
+  })
+
+  it('docuseal: no capability slug values remain in any recording', () => {
+    // The submitter slug IS the capability (possession of /s/<slug> grants
+    // signing access): only the /s/<slug> and /e/<slug> shape placeholders may
+    // appear. A raw 6+ char slug in a slug field or a path segment is a leak.
+    for (const file of readdirSync(join(ROOT, 'fixtures', 'docuseal'))) {
+      const text = readFileSync(join(ROOT, 'fixtures', 'docuseal', file), 'utf8')
+      expect(text).not.toMatch(/"slug":\s*"[A-Za-z0-9_-]{6,}"/)
+      expect(text).not.toMatch(/\/[se]\/[A-Za-z0-9_-]{6,}/)
     }
   })
 })

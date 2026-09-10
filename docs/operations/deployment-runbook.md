@@ -51,8 +51,13 @@ signers are synthetic (e.g. `signer@example.com`).
 
 1. Start and verify the stack: `node deploy/local/stack.mjs start`, then
    `node deploy/local/stack.mjs health`.
-2. Capture the Paperless contract journeys: `node scripts/capture/capture-paperless.mjs`
-   (writes `fixtures/paperless/*.json`; token requests retry on the pinned build's 429 throttle).
+2. Capture the Paperless contract journeys: export the SIG-001 manifest sha256
+   from `fixtures/signatures/signatures-manifest.json` as `FIXTURE_SHA`
+   (fail-fast: the script refuses to run without it or on a mismatch), then run
+   `node scripts/capture/capture-paperless.mjs` (writes
+   `fixtures/paperless/*.json`; token requests retry on the pinned build's 429
+   throttle). To record only the failed-processing shape without re-running the
+   success journeys, append `--only=failed-consume`.
 3. Capture the DocuSeal contract journeys and SIG-007:
    `node scripts/capture/capture-docuseal.mjs`. The script starts the webhook receiver
    on host port 8300 and keeps it listening before the signing flow completes (the
@@ -87,6 +92,12 @@ On any upstream re-pin (`deploy/upstream-versions.json`):
    redaction, no-false-status); escalate instead of weakening. Record contract notes
    with the assertions, and update `docs/engineering/signature-fixture-catalog.md`
    (checksums, capture dates) in the same change.
+5. Write and keep every recording as UTF-8. `JourneyRecorder` writes UTF-8; do not
+   post-process, re-save, or re-encode the recordings through a non-UTF-8 editor or
+   shell redirection. The committed `fixtures/docuseal/submissions.json` and
+   `fixtures/docuseal/webhook.json` currently carry double-encoded em-dash mojibake
+   from the M0-C session; a re-capture must not reproduce or compound it, and the
+   committed recordings' notes are never edited by hand.
 
 ## Deployment procedure
 

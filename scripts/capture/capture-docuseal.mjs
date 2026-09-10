@@ -7,7 +7,8 @@
 // against the pinned routes.rb and observed 404s), so those two operations are
 // driven through an authenticated browser session and recorded as UI journeys;
 // everything downstream (submissions, progress, completed PDF) uses the API.
-// Signed capability URLs (/file, /disk, /s/<slug>) are scrubbed from
+// Signed capability URLs (/file, /disk, /s/<slug>) and the raw capability
+// slugs themselves (/s/<slug>, /e/<slug> submitter links) are scrubbed from
 // recordings before write - capability URLs never enter committed fixtures.
 import { createHash } from 'node:crypto'
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
@@ -53,11 +54,22 @@ let adminEmail = null
 // login email is scrubbed too - the write-guard refuses any .env value
 // substring, and it contains the PAPERLESS_ADMIN_USER value.
 const SIGNED_URL_RE = /https?:\/\/[^\s"'<>]*\/(file|disk|s|e|p)\/[^\s"'<>]*/g
+// The submitter slug IS the capability (possession of /s/<slug> grants signing
+// access), so the raw slug value never enters a recording either. It appears
+// in two shapes: bare "slug" values in API bodies and /s|/e path segments in
+// notes/actions. Both are reduced to a shape-only placeholder.
+const SLUG_PATH_RE = /\/([se])\/[A-Za-z0-9_-]+/g
+const SLUG_VALUE_RE = /^[A-Za-z0-9_-]{6,}$/
+const SLUG_PLACEHOLDER = '<slug>'
 const scrubUrls = (value) =>
   JSON.parse(
-    JSON.stringify(value, (_k, v) =>
-      typeof v === 'string' ? v.replace(SIGNED_URL_RE, '<redacted:capability-url>') : v,
-    ),
+    JSON.stringify(value, (k, v) => {
+      if (typeof v !== 'string') return v
+      if (k === 'slug' && SLUG_VALUE_RE.test(v)) return SLUG_PLACEHOLDER
+      return v
+        .replace(SIGNED_URL_RE, '<redacted:capability-url>')
+        .replace(SLUG_PATH_RE, (_m, s) => `/${s}/${SLUG_PLACEHOLDER}`)
+    }),
   )
 const scrubSensitive = (value) =>
   JSON.parse(
@@ -307,7 +319,7 @@ subs.step({
     },
   },
   response: { status: subRes.status, headers: subRes.headers, body: scrubSensitive(subRes.body) },
-  notes: `signer link path recorded as /s/${slug} (full URL scrubbed); response is a bare submitter array on pinned 3.2.4 - slug at [0].slug, submission id at [0].submission_id; submitter key is role (singular)`,
+  notes: `signer link path recorded as /s/${'<slug>'} (raw slug scrubbed at write time - it is a capability); response is a bare submitter array on pinned 3.2.4 - slug at [0].slug, submission id at [0].submission_id; submitter key is role (singular)`,
 })
 
 // ---- journey: progress (pre/post-completion status vocabulary) --------------
@@ -347,7 +359,7 @@ subs.step({
   name: 'complete-signing-via-public-page',
   request: {
     via: 'browser-ui',
-    action: `GET /s/${slug} then typed-signature flow (text field -> NEXT -> SIGN NOW -> Type tab -> SIGN AND COMPLETE)`,
+    action: `GET /s/${'<slug>'} then typed-signature flow (text field -> NEXT -> SIGN NOW -> Type tab -> SIGN AND COMPLETE)`,
     headers: {},
     body: { signer: SIGNER.name, signatureMode: 'type' },
   },
@@ -411,7 +423,9 @@ const deliveries = hook.deliveries.map((d) => {
   } catch {
     parsed = {
       unparseable: true,
-      scrubbed: String(d.body).replace(SIGNED_URL_RE, '<redacted:capability-url>'),
+      scrubbed: String(d.body)
+        .replace(SIGNED_URL_RE, '<redacted:capability-url>')
+        .replace(SLUG_PATH_RE, (_m, s) => `/${s}/${SLUG_PLACEHOLDER}`),
     }
   }
   const sigHeader = d.headers['x-docuseal-signature']
