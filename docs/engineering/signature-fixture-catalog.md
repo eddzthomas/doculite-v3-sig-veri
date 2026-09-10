@@ -14,7 +14,7 @@ Fixtures must be legally shareable, non-sensitive PDFs stored outside production
 | SIG-003 | Valid signature, root-B not in candidate trust policy | `valid_untrusted` | Generator: leaf(B) over pdf-lib document |
 | SIG-004 | Content altered after signing | `invalid` | Generator: single-byte mutation of sig-002 inside the signed range |
 | SIG-005 | Malformed signature container | `error` | Generator: PKCS#7 hex corruption of sig-002 |
-| SIG-006 | Multiple signatures with mixed trust | `valid_untrusted` | Generator: leaf(A) then leaf(B) incremental signatures; aggregate and per-signature evidence is asserted in the offline replay tests |
+| SIG-006 | Multiple signatures with mixed trust | `valid_untrusted` | Generator: leaf(A) then leaf(B) incremental signatures; the offline replay tests assert only the structural two-ByteRange fact — per-signature trust evidence is M0-D verifier work |
 | SIG-007 | Completed DocuSeal document | `valid_untrusted` | Live capture from pinned DocuSeal 3.2.4 during the M0-C capture session: real PKCS#7 detached signature under the self-signed certificate DocuSeal embeds at signing |
 | SIG-008 | Valid external signature | `valid_untrusted` | Generator: leaf(B) over a distinct document (proves validity is independent of DocuSeal provenance) |
 | SIG-009 | Verifier transport/service failure | `error` | Scenario fixture: recorded verifier-unreachable and verifier-rejects-malformed-input exchanges at `fixtures/docuseal/verifier-error.json` (no PDF bytes) |
@@ -39,7 +39,7 @@ SIG-009 has no checksum by design: it is a recorded interaction scenario (`fixtu
 
 - Generator-produced fixtures (SIG-001–SIG-006, SIG-008): generated 2026-09-08 (manifest `generatedAt` 2026-09-08T20:33:33.077Z, generator version 1.0.0) by `node scripts/generate-fixtures/generate-all.mjs`. Signing keys are not committed; only the public test roots and leaf certificates are (`fixtures/signatures/root-a.pem`, `root-a-leaf.pem`, `root-b.pem`, `root-b-leaf.pem`). These are synthetic, test-only certificate chains and must never be added to a production trust policy.
 - SIG-007: captured live from the pinned DocuSeal 3.2.4 stack on 2026-09-09 (manifest `capturedAt` 2026-09-09T03:53:29.065Z) during the capture session in `docs/operations/deployment-runbook.md`; the completed PDF bytes are committed as `fixtures/signatures/sig-007.pdf` and its sha256 is recorded by the capture script at capture time.
-- Paperless contract recordings (`fixtures/paperless/*.json`: `auth`, `upload-polling`, `search-list`, `preview`, `metadata`, `download`, `permissions`) were captured 2026-09-09 against pinned Paperless-ngx v3.1.3.
+- Paperless contract recordings (`fixtures/paperless/*.json`: `auth`, `upload-polling`, `failed-consume`, `search-list`, `preview`, `metadata`, `download`, `permissions`) were captured 2026-09-09 against pinned Paperless-ngx v3.1.3; the `failed-consume` journey (failed-processing task shape for a corrupt upload) was added 2026-09-10 against the same pinned build via `--only=failed-consume`.
 - DocuSeal contract recordings (`fixtures/docuseal/*.json`: `submissions`, `progress`, `webhook`, `verifier-error`) were captured 2026-09-09 against pinned DocuSeal 3.2.4.
 
 Recordings are contract fixtures, not customer data: no real documents, signer identities (signers are synthetic, e.g. `signer@example.com`), credentials, tokens, capability URLs, or admin emails are committed. Capture scripts sanitize recordings and a write-guard refuses to write unredacted content.

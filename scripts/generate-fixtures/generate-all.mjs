@@ -2,6 +2,9 @@
 import { createHash } from 'node:crypto'
 // Generates fixtures/signatures/* — synthetic, self-signed, shareable.
 // Keys are NOT committed; artifacts are one-shot, checksums in the manifest.
+// NEVER regenerate after a capture session begins: a re-run swaps the
+// certificate roots out from under the captured fixtures (re-capture ordering:
+// docs/operations/deployment-runbook.md, "Re-capture on re-pin").
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
