@@ -87,7 +87,9 @@ describe('signatures manifest', () => {
     const item = manifest.items.find((i) => i.id === 'SIG-009')
     expect(item.file).toBeNull()
     expect(item.sha256).toBeNull()
-    expect(item.scenario).toBe('recordings/docuseal/verifier-error')
+    // Points at the committed recording (replay-verified in
+    // scripts/test/replay/manifest.test.mjs).
+    expect(item.scenario).toBe('fixtures/docuseal/verifier-error.json')
   })
 
   it('cert material is committed for both trust paths', () => {
