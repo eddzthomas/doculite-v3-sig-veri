@@ -176,16 +176,18 @@ describe('docuseal recordings', () => {
     expect(create.request.body.send_email).toBe(false)
     // contract note: pinned 3.2.4 returns a bare submitter array — slug at
     // [0].slug, submission id at [0].submission_id, role key singular. Ids and
-    // slugs are per-run values, so only shapes are asserted.
+    // slugs are per-run values, and the slug is a capability (possession of
+    // /s/<slug> grants signing access), so it is recorded as a shape-only
+    // placeholder.
     const created = create.response.body
     expect(Array.isArray(created)).toBe(true)
-    expect(created[0].slug).toMatch(/^[A-Za-z0-9]+$/)
+    expect(created[0].slug).toBe('<slug>')
     expect(Number.isInteger(created[0].submission_id)).toBe(true)
     expect(created[0].submission_id).toBeGreaterThan(0)
     expect(created[0]).toHaveProperty('role')
     expect(created[0]).not.toHaveProperty('roles')
-    // Public hosted signer page path is /s/<slug>.
-    expect(create.notes).toMatch(/\/s\/[A-Za-z0-9]+/)
+    // Public hosted signer page path is /s/<slug> (raw slug scrubbed).
+    expect(create.notes).toMatch(/\/s\/<slug>/)
   })
 
   it('submissions: capability URLs scrubbed, completion documents via signed URL', () => {
@@ -287,6 +289,17 @@ describe('redaction invariants (all recordings)', () => {
           expect(text).not.toContain(secret.value)
         }
       }
+    }
+  })
+
+  it('docuseal: no capability slug values remain in any recording', () => {
+    // The submitter slug IS the capability (possession of /s/<slug> grants
+    // signing access): only the /s/<slug> and /e/<slug> shape placeholders may
+    // appear. A raw 6+ char slug in a slug field or a path segment is a leak.
+    for (const file of readdirSync(join(ROOT, 'fixtures', 'docuseal'))) {
+      const text = readFileSync(join(ROOT, 'fixtures', 'docuseal', file), 'utf8')
+      expect(text).not.toMatch(/"slug":\s*"[A-Za-z0-9_-]{6,}"/)
+      expect(text).not.toMatch(/\/[se]\/[A-Za-z0-9_-]{6,}/)
     }
   })
 })

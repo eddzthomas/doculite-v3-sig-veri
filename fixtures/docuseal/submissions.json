@@ -120,7 +120,7 @@
         "body": {
           "id": 10,
           "name": "M0C Capture Template",
-          "slug": "ndmdRUqnJwXq9x",
+          "slug": "<slug>",
           "schema": [
             {
               "attachment_uuid": "4db30077-432c-41c8-8df2-56a824197d60",
@@ -239,7 +239,7 @@
         "body": [
           {
             "id": 6,
-            "slug": "gKUa4oWziVbYkf",
+            "slug": "<slug>",
             "uuid": "984b9aac-077d-4c4a-8239-0bccb7825018",
             "name": "Capture Fixture Signer",
             "email": "signer@example.com",
@@ -265,13 +265,13 @@
           }
         ]
       },
-      "notes": "signer link path recorded as /s/gKUa4oWziVbYkf (full URL scrubbed); response is a bare submitter array on pinned 3.2.4 â€” slug at [0].slug, submission id at [0].submission_id; submitter key is role (singular)"
+      "notes": "signer link path recorded as /s/<slug> (full URL scrubbed); response is a bare submitter array on pinned 3.2.4 â€” slug at [0].slug, submission id at [0].submission_id; submitter key is role (singular)"
     },
     {
       "name": "complete-signing-via-public-page",
       "request": {
         "via": "browser-ui",
-        "action": "GET /s/gKUa4oWziVbYkf then typed-signature flow (text field -> NEXT -> SIGN NOW -> Type tab -> SIGN AND COMPLETE)",
+        "action": "GET /s/<slug> then typed-signature flow (text field -> NEXT -> SIGN NOW -> Type tab -> SIGN AND COMPLETE)",
         "headers": {},
         "body": {
           "signer": "Capture Fixture Signer",
