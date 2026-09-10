@@ -125,7 +125,7 @@ async function main() {
     condition: 'Verifier transport/service failure',
     expectedOutcome: 'error',
     construction: 'scenario fixture: recorded verifier-unreachable exchanges',
-    scenario: 'recordings/docuseal/verifier-error',
+    scenario: 'fixtures/docuseal/verifier-error.json',
     capturedFrom: 'generator',
   })
 

@@ -70,11 +70,16 @@ describe('paperless recordings', () => {
     expect(terminal.notes).toMatch(/terminal state success/)
     expect(terminal.notes).toMatch(/states seen: started,success/)
     const task = terminal.response.body[0]
-    expect(['started', 'success', 'failure', 'pending']).toContain(task.status)
     expect(task.status).toBe('success')
     // contract note: the pinned build exposes related_document_ids on the
-    // consume task — the linkage upload -> document id depends on.
-    expect(task.related_document_ids).toEqual([4])
+    // consume task — the linkage upload -> document id depends on it. Shape
+    // only: the concrete document id is a per-run capture value.
+    expect(Array.isArray(task.related_document_ids)).toBe(true)
+    expect(task.related_document_ids.length).toBeGreaterThanOrEqual(1)
+    for (const id of task.related_document_ids) {
+      expect(id).toBeGreaterThan(0)
+      expect(Number.isInteger(id)).toBe(true)
+    }
   })
 
   it('upload-polling: post_document returns a bare consume-task id string', () => {
@@ -170,15 +175,17 @@ describe('docuseal recordings', () => {
     expect(create.notes).toMatch(/\/s\//)
     expect(create.request.body.send_email).toBe(false)
     // contract note: pinned 3.2.4 returns a bare submitter array — slug at
-    // [0].slug, submission id at [0].submission_id, role key singular.
+    // [0].slug, submission id at [0].submission_id, role key singular. Ids and
+    // slugs are per-run values, so only shapes are asserted.
     const created = create.response.body
     expect(Array.isArray(created)).toBe(true)
     expect(created[0].slug).toMatch(/^[A-Za-z0-9]+$/)
-    expect(created[0].submission_id).toBe(6)
+    expect(Number.isInteger(created[0].submission_id)).toBe(true)
+    expect(created[0].submission_id).toBeGreaterThan(0)
     expect(created[0]).toHaveProperty('role')
     expect(created[0]).not.toHaveProperty('roles')
-    // Hosted signer page path recorded as /s/<slug>.
-    expect(create.notes).toContain('/s/gKUa4oWziVbYkf')
+    // Public hosted signer page path is /s/<slug>.
+    expect(create.notes).toMatch(/\/s\/[A-Za-z0-9]+/)
   })
 
   it('submissions: capability URLs scrubbed, completion documents via signed URL', () => {
@@ -226,16 +233,12 @@ describe('docuseal recordings', () => {
     const events = step.response.body.map((d) => d.body.event_type)
     // contract note: pinned 3.2.4 delivered form.viewed, form.started,
     // form.completed, submission.completed for a single-submitter API-driven
-    // signing journey; deliveries are unique (no retries observed).
-    expect(events).toEqual([
-      'form.viewed',
-      'form.started',
-      'form.completed',
-      'submission.completed',
-    ])
-    // Notification-only invariant: payload data is exactly one notification
-    // body per delivery; the product reconciles against an API read.
-    expect(new Set(events).size).toBe(events.length)
+    // signing journey; deliveries are unique (no duplicates observed). The SET
+    // is the contract — delivery ORDER is not guaranteed by upstream.
+    expect(new Set(events)).toEqual(
+      new Set(['form.viewed', 'form.started', 'form.completed', 'submission.completed']),
+    )
+    expect(events.length).toBe(4)
   })
 
   it('verifier-error: transport failure mapped to `error`, never a validity status', () => {
@@ -276,7 +279,6 @@ describe('redaction invariants (all recordings)', () => {
 
   it('no DEV ONLY .env secret value leaks into any recording', () => {
     // CI-safe: deploy/local/.env may be absent; only leak-check when present.
-    expect(envSecrets.length).toBeGreaterThanOrEqual(0)
     if (envSecrets.length === 0) return
     for (const service of services) {
       for (const file of readdirSync(join(ROOT, 'fixtures', service))) {
