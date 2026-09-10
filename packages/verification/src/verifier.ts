@@ -17,7 +17,6 @@ const OID_SIGNED_DATA = '1.2.840.113549.1.7.2'
 const OID_MESSAGE_DIGEST = '1.2.840.113549.1.9.4'
 const OID_SHA1 = '1.3.14.3.2.26'
 const OID_RSA_ENCRYPTION = '1.2.840.113549.1.1.1'
-const OID_RSA_FAMILY_PREFIX = '1.2.840.113549.1.1.'
 
 const DIGEST_NAMES: Record<string, string> = {
   '2.16.840.1.101.3.4.2.1': 'SHA-256',
@@ -291,9 +290,13 @@ export function verifySignature(bytes: Uint8Array, sig: ScannedSignature): Signa
     expectTag(keyAlgorithmTlv, TAG_SEQUENCE, 'cms-parse', 'SignerInfo structure unexpected')
     expectTag(encryptedDigestTlv, TAG_OCTET_STRING, 'cms-parse', 'SignerInfo structure unexpected')
 
-    // Key algorithm: RSA family only at M0-D (fixtures are RSA-2048).
+    // Key algorithm: exactly rsaEncryption at M0-D (fixtures are RSA-2048
+    // PKCS#1 v1.5). Other RSA-family OIDs (RSASSA-PSS, OAEP, md5WithRSA…)
+    // use padding/hashing our verifier does not evaluate — a PKCS#1 v1.5
+    // check on them would assert invalidity for a container we cannot
+    // evaluate. Fail-safe: error, never a guess.
     const keyOid = decodeOid(der, child(der, keyAlgorithmTlv, 0))
-    if (!keyOid.startsWith(OID_RSA_FAMILY_PREFIX)) {
+    if (keyOid !== OID_RSA_ENCRYPTION) {
       return {
         integrity: 'error',
         detail: 'key-algorithm: unsupported digestEncryptionAlgorithm OID',
@@ -360,7 +363,7 @@ export function verifySignature(bytes: Uint8Array, sig: ScannedSignature): Signa
           detail: 'message-digest-attribute: no messageDigest attribute present',
         }
       }
-      const signerFacts = facts(certBytes, digestName, keyOid, subject, cert, [
+      const signerFacts = facts(certBytes, digestName, subject, cert, [
         start1,
         length1,
         start2,
@@ -394,23 +397,13 @@ export function verifySignature(bytes: Uint8Array, sig: ScannedSignature): Signa
       return {
         integrity: 'invalid',
         detail: 'rsa-verify: signature does not verify against the signer certificate',
-        signer: facts(certBytes, digestName, keyOid, subject, cert, [
-          start1,
-          length1,
-          start2,
-          length2,
-        ]),
+        signer: facts(certBytes, digestName, subject, cert, [start1, length1, start2, length2]),
       }
     }
     return {
       integrity: 'valid',
       detail: 'verified: coverage, digest attribute, and RSA signature all consistent',
-      signer: facts(certBytes, digestName, keyOid, subject, cert, [
-        start1,
-        length1,
-        start2,
-        length2,
-      ]),
+      signer: facts(certBytes, digestName, subject, cert, [start1, length1, start2, length2]),
     }
   } catch (e) {
     if (e instanceof ParseError) {
@@ -442,7 +435,6 @@ function findMessageDigestAttr(der: Uint8Array, signedAttrs: DerTlv): Uint8Array
 function facts(
   certBytes: Uint8Array,
   digestName: string,
-  keyOid: string,
   subject: string,
   cert: forge.pki.Certificate,
   ranges: [number, number, number, number],
@@ -455,9 +447,8 @@ function facts(
   return {
     coveredRanges,
     digestAlgorithm: digestName,
-    // RSA family OIDs share the PKCS#1 prefix; report the concrete operation.
-    signatureAlgorithm:
-      keyOid === OID_RSA_ENCRYPTION ? `RSA with ${digestName}` : `RSA signature OID ${keyOid}`,
+    // Only reached after the key-algorithm gate passed (rsaEncryption).
+    signatureAlgorithm: `RSA with ${digestName}`,
     signerSubject: subject,
     // Fingerprint = SHA-256 of the certificate's exact DER bytes (same
     // convention the Task 3 trust anchors use for root certificates).
@@ -591,16 +582,21 @@ export function evaluateIntegrity(bytes: Uint8Array): IntegrityEvaluation {
       }
       perSignature.push(toSummary(verifySignature(bytes, scannedSig), scannedSig.byteRange))
     }
-    if (!coversWholeDocument(bytes, signatures)) {
-      return {
-        integrity: 'error',
-        perSignature: [],
-        raw: { detail: 'coverage: signed byte ranges do not cover the document exactly' },
+    // Whole-document coverage is a structural property: on failure the
+    // document is error, but the already-computed per-signature entries are
+    // kept (with a coverage note) so debugging detail survives to Task 4.
+    const coverageFailed = !coversWholeDocument(bytes, signatures)
+    if (coverageFailed) {
+      for (const entry of perSignature) {
+        entry.notes.push('coverage: signed byte ranges do not cover the document exactly')
       }
     }
     return {
-      integrity: aggregate(perSignature.map((entry) => entry.integrity)),
+      integrity: coverageFailed ? 'error' : aggregate(perSignature.map((entry) => entry.integrity)),
       perSignature,
+      // SECURITY: `raw` embeds the full /Contents hex blobs (signature
+      // containers) — never log it, never persist it, never return it to a
+      // browser. M0-D offline proof only; M1+ replaces it with a reference.
       raw: { scan: scanned, perSignature },
     }
   } catch {

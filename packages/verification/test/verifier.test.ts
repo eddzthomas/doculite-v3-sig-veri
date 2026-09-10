@@ -37,4 +37,20 @@ describe('evaluateIntegrity (integrity dimension only)', () => {
       evaluateIntegrity(new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x00, 0x01])).integrity,
     ).toBe('error')
   })
+  it('non-rsaEncryption key algorithm → error (fail-safe, never invalid)', () => {
+    // Patch the SignerInfo digestEncryptionAlgorithm OID (last occurrence of
+    // the rsaEncryption hex) to sha256WithRSAEncryption, same byte length, so
+    // offsets/coverage stay intact. A permissive RSA-family-prefix gate would
+    // run PKCS#1 v1.5 verification (and report valid) for a container whose
+    // declared algorithm we cannot evaluate; the tightened gate fails safe.
+    const text = Buffer.from(pdf('sig-002.pdf')).toString('latin1')
+    const rsaEncryption = '2a864886f70d010101'
+    const at = text.lastIndexOf(rsaEncryption)
+    const patched = `${text.slice(0, at)}2a864886f70d01010b${text.slice(at + rsaEncryption.length)}`
+    const r = evaluateIntegrity(new Uint8Array(Buffer.from(patched, 'latin1')))
+    expect(r.integrity).toBe('error')
+    expect(r.perSignature[0]?.notes).toContain(
+      'key-algorithm: unsupported digestEncryptionAlgorithm OID',
+    )
+  })
 })
