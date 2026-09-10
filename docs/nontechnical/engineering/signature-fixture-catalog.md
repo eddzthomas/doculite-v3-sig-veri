@@ -8,3 +8,5 @@ The samples are now real, checked-in files: eight are test PDFs (each with a rec
 
 The automated replay tests check the structure of the samples and the recorded service behavior (for example, that the multi-signature sample really carries two signature containers, and how the document service reports an upload it cannot process). They do not yet prove detailed evidence for each individual signature — that level of per-signature trust evidence is the upcoming verifier work (M0-D).
 
+On 2026-09-10, the completed checking engine (verification adapter version 1.0.0) was run against every sample PDF, and each one reported exactly its expected result — including the damaged-signature sample, which is reported as "unable to check", as designed. If the samples or the engine change, the results must be re-recorded before they can be relied on again.
+

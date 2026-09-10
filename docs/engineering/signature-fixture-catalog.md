@@ -7,6 +7,8 @@ Fixtures must be legally shareable, non-sensitive PDFs stored outside production
 
 ## Inventory
 
+All PDF-backed fixtures were verified 2026-09-10 against verification adapter v1.0.0 (`packages/verification`): per-fixture outcomes matched the expected product outcomes below, including SIG-005 → `error` (the adapter's pinned production behavior for a malformed signature container). The re-baseline rule at the end of this catalog remains in force.
+
 | Fixture ID | Condition | Expected product outcome | Source / construction |
 |---|---|---|---|
 | SIG-001 | Unsigned PDF | `unsigned` | Generator: pdf-lib document only, no signature |
